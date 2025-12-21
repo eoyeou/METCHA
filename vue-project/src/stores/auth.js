@@ -10,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value)
 
-  // 로그인 (임시 - 나중에 구현)
+  // 로그인
   const login = async (credentials) => {
     try {
       const response = await axios.post(`${API_URL}/accounts/login/`, credentials)
@@ -20,17 +20,40 @@ export const useAuthStore = defineStore('auth', () => {
       
       // Axios 헤더에 토큰 설정
       axios.defaults.headers.common['Authorization'] = `Token ${response.data.token}`
+      return response.data
+    } catch (err) {
+      throw err
+    }
+  }
+
+  // 회원가입
+  const register = async (userData) => {
+    try {
+      const response = await axios.post(`${API_URL}/accounts/register/`, userData)
+      token.value = response.data.token
+      user.value = response.data.user
+      localStorage.setItem('token', response.data.token)
+      
+      // Axios 헤더에 토큰 설정
+      axios.defaults.headers.common['Authorization'] = `Token ${response.data.token}`
+      return response.data
     } catch (err) {
       throw err
     }
   }
 
   // 로그아웃
-  const logout = () => {
-    token.value = null
-    user.value = null
-    localStorage.removeItem('token')
-    delete axios.defaults.headers.common['Authorization']
+  const logout = async () => {
+    try {
+      await axios.post(`${API_URL}/accounts/logout/`)
+    } catch (err) {
+      console.error('로그아웃 실패:', err)
+    } finally {
+      token.value = null
+      user.value = null
+      localStorage.removeItem('token')
+      delete axios.defaults.headers.common['Authorization']
+    }
   }
 
   // 초기화 시 토큰이 있으면 헤더에 설정
@@ -43,6 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isAuthenticated,
     login,
+    register,
     logout
   }
 })

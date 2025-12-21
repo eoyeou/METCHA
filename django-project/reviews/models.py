@@ -40,16 +40,15 @@ class Review(models.Model):
 
 
 class ReviewEmbedding(models.Model):
-    """리뷰 임베딩 모델 (RAG용)"""
+    """리뷰 임베딩 모델 (추천 시스템용)"""
     review = models.OneToOneField(
         Review, 
         on_delete=models.CASCADE, 
         related_name='embedding'
     )
-    # pgvector 대신 TextField로 임시 저장
-    embedding_vector = models.TextField(
-        blank=True,
-        help_text="임베딩 벡터 (JSON 형식으로 저장)"
+    # 임베딩 벡터를 JSONField로 저장 (배열 형태)
+    embedding_vector = models.JSONField(
+        help_text="리뷰 텍스트 임베딩 벡터 (배열 형태)"
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

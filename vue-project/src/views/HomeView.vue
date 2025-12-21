@@ -2,10 +2,11 @@
   <div class="home-container">
     <!-- 헤더 -->
     <header class="home-header">
-      <div class="logo">MOVIE SITE</div>
+      <div class="logo" @click="goToHome">MOVIE SITE</div>
       <div class="header-buttons" v-if="authStore.isAuthenticated">
         <button @click="goToProfile" class="btn-header">내 프로필</button>
         <button @click="goToPreference" class="btn-header">리뷰작성</button>
+        <button @click="handleLogout" class="btn-header btn-logout">로그아웃</button>
       </div>
       <div class="header-buttons" v-else>
         <button @click="goToLogin" class="btn-header">로그인</button>
@@ -149,10 +150,21 @@ const goToMovie = (movieId) => {
 }
 
 // 네비게이션
+const goToHome = () => router.push('/')
 const goToProfile = () => router.push('/profile')
-const goToPreference = () => router.push('/preference')
+const goToPreference = () => router.push('/reviews/create')
 const goToLogin = () => router.push('/login')
-const goToSignup = () => router.push('/signup')
+const goToSignup = () => router.push('/register')
+
+// 로그아웃
+const handleLogout = async () => {
+  try {
+    await authStore.logout()
+    router.push('/')
+  } catch (error) {
+    console.error('로그아웃 실패:', error)
+  }
+}
 
 // 검색창 외부 클릭 시 결과 닫기
 onMounted(() => {
@@ -208,6 +220,15 @@ onMounted(() => {
 .btn-header:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
+}
+
+.btn-logout {
+  background: rgba(231, 76, 60, 0.3);
+  border-color: rgba(231, 76, 60, 0.5);
+}
+
+.btn-logout:hover {
+  background: rgba(231, 76, 60, 0.5);
 }
 
 .main-content {
