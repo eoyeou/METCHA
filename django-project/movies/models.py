@@ -1,20 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
-from pgvector.django import VectorField
-
-
-class User(AbstractUser):
-
-    profile_image = models.ImageField(upload_to='profiles/', null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'user'
-
-    def __str__(self):
-        return self.username
+from accounts.models import User
 
 
 class Genre(models.Model):
@@ -28,6 +14,7 @@ class Genre(models.Model):
 
 
 class Movie(models.Model):
+    tmdb_id = models.IntegerField(unique=True, null=True, blank=True, help_text="TMDB 영화 ID")
     title = models.CharField(max_length=200)
     original_title = models.CharField(max_length=200, blank=True)
     description = models.TextField()
@@ -49,6 +36,7 @@ class Movie(models.Model):
         indexes = [
             models.Index(fields=['title']),
             models.Index(fields=['release_year']),
+            models.Index(fields=['tmdb_id']),
         ]
 
     def __str__(self):
@@ -93,14 +81,16 @@ class Review(models.Model):
 
 
 class ReviewEmbedding(models.Model):
-    """리뷰 임베딩 모델 (RAG용)"""
+    """리뷰 임베딩 모델 (추천 시스템용)"""
     review = models.OneToOneField(
         Review, 
         on_delete=models.CASCADE, 
         related_name='embedding'
     )
-    # pgvector 사용 시 (PostgreSQL + pgvector 확장 필요)
-    embedding_vector = VectorField(dimensions=1536)  # OpenAI embedding 차원
+    # 임베딩 벡터를 JSONField로 저장 (배열 형태)
+    embedding_vector = models.JSONField(
+        help_text="리뷰 텍스트 임베딩 벡터 (배열 형태)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
