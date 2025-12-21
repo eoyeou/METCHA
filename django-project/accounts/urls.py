@@ -1,8 +1,9 @@
-# accounts/urls.py
 from django.urls import path
+from . import views
 
 app_name = 'accounts'
 
 urlpatterns = [
-    # 로그인, 회원가입 등은 나중에 추가
+    path('signup/', views.signup),  
+    path('profile/', views.profile), 
 ]

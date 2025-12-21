@@ -43,8 +43,10 @@ INSTALLED_APPS = [
     "movies",
     "reviews",
     "rest_framework",
+    "rest_framework.authtoken",
     # "pgvector",
     "corsheaders",
+    "dj_rest_auth",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -70,6 +72,17 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 
 
@@ -150,3 +163,14 @@ AUTH_USER_MODEL = 'accounts.User'
 TMDB_API_KEY = env('TMDB_API_KEY')
 TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/original'
+
+REST_FRAMEWORK = {
+    # 전역 인증 정책
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',  # Token 인증
+    ],
+    # 전역 권한 정책
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # 읽기는 누구나, 쓰기는 인증 필요
+    ],
+}
