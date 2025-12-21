@@ -1,9 +1,9 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from accounts.models import User
 
 
 class Genre(models.Model):
+ 
     genre_name = models.CharField(max_length=50, unique=True)
 
     class Meta:
@@ -14,7 +14,7 @@ class Genre(models.Model):
 
 
 class Movie(models.Model):
-    tmdb_id = models.IntegerField(unique=True, null=True, blank=True, help_text="TMDB 영화 ID")
+
     title = models.CharField(max_length=200)
     original_title = models.CharField(max_length=200, blank=True)
     description = models.TextField()
@@ -36,11 +36,21 @@ class Movie(models.Model):
         indexes = [
             models.Index(fields=['title']),
             models.Index(fields=['release_year']),
-            models.Index(fields=['tmdb_id']),
         ]
 
     def __str__(self):
         return f"{self.title} ({self.release_year})"
+
+    def update_rating(self):
+        """영화의 평균 평점과 리뷰 수 업데이트"""
+        from reviews.models import Review
+        reviews = Review.objects.filter(movie=self)
+        self.review_count = reviews.count()
+        if self.review_count > 0:
+            self.avg_rating = reviews.aggregate(models.Avg('rating'))['rating__avg']
+        else:
+            self.avg_rating = 0.0
+        self.save()
 
 
 class MovieGenre(models.Model):
@@ -54,104 +64,3 @@ class MovieGenre(models.Model):
 
     def __str__(self):
         return f"{self.movie.title} - {self.genre.genre_name}"
-
-
-class Review(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
-    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='reviews')
-    rating = models.FloatField(
-        validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
-    )
-    content = models.TextField()
-    likes_count = models.IntegerField(default=0)
-    is_spoiler = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'review'
-        unique_together = ('user', 'movie')  # 한 사용자가 한 영화에 하나의 리뷰만
-        indexes = [
-            models.Index(fields=['movie', '-created_at']),
-            models.Index(fields=['user', '-created_at']),
-        ]
-
-    def __str__(self):
-        return f"{self.user.username} - {self.movie.title} ({self.rating}★)"
-
-
-class ReviewEmbedding(models.Model):
-    """리뷰 임베딩 모델 (추천 시스템용)"""
-    review = models.OneToOneField(
-        Review, 
-        on_delete=models.CASCADE, 
-        related_name='embedding'
-    )
-    # 임베딩 벡터를 JSONField로 저장 (배열 형태)
-    embedding_vector = models.JSONField(
-        help_text="리뷰 텍스트 임베딩 벡터 (배열 형태)"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'review_embedding'
-
-    def __str__(self):
-        return f"Embedding for Review #{self.review.id}"
-
-
-class Watchlist(models.Model):
-    STATUS_CHOICES = [
-        ('want', '보고싶어요'),
-        ('watching', '보는중'),
-        ('watched', '봤어요'),
-    ]
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='watchlist')
-    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='watchlist')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='want')
-    watched_at = models.DateTimeField(null=True, blank=True)
-    added_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'watchlist'
-        unique_together = ('user', 'movie')
-        indexes = [
-            models.Index(fields=['user', 'status']),
-        ]
-
-    def __str__(self):
-        return f"{self.user.username} - {self.movie.title} ({self.get_status_display()})"
-
-
-class PreferenceReport(models.Model):
- 
-    user = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='preference_reports'
-    )
-    genre_distribution = models.JSONField(
-        help_text="장르별 선호도 분포 {'액션': 30, '드라마': 50, ...}"
-    )
-    mood_analysis = models.JSONField(
-        help_text="무드 분석 결과 {'우울한': 20, '유쾌한': 40, ...}"
-    )
-    director_preferences = models.JSONField(
-        help_text="선호 감독 {'봉준호': 5, '크리스토퍼 놀란': 3, ...}"
-    )
-    top_rated_movies = models.JSONField(
-        help_text="높은 평점을 준 영화 리스트"
-    )
-    summary = models.TextField(help_text="취향 분석 요약")
-    generated_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'preference_report'
-        ordering = ['-generated_at']
-        indexes = [
-            models.Index(fields=['user', '-generated_at']),
-        ]
-
-    def __str__(self):
-        return f"{self.user.username}의 취향 리포트 ({self.generated_at.date()})"
