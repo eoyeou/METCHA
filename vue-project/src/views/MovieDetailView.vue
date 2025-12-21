@@ -253,7 +253,6 @@ const newReview = ref({
   is_spoiler: false
 })
 
-// 영화 정보 로드
 const loadMovie = async () => {
   const movieId = route.params.id
   try {
@@ -267,7 +266,6 @@ onMounted(() => {
   loadMovie()
 })
 
-// 별점 표시
 const getStars = (rating) => {
   const fullStars = Math.floor(rating)
   const halfStar = rating % 1 >= 0.5 ? 1 : 0
@@ -278,7 +276,6 @@ const getStars = (rating) => {
          '☆'.repeat(emptyStars)
 }
 
-// 날짜 포맷
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   const now = new Date()
@@ -296,12 +293,10 @@ const formatDate = (dateString) => {
   })
 }
 
-// 이미지 에러 처리
 const handleImageError = (event) => {
   event.target.src = 'https://via.placeholder.com/300x450?text=No+Image'
 }
 
-// 리뷰 폼 토글
 const toggleReviewForm = () => {
   showReviewForm.value = !showReviewForm.value
   if (!showReviewForm.value) {
@@ -309,7 +304,6 @@ const toggleReviewForm = () => {
   }
 }
 
-// 리뷰 작성/수정
 const submitReview = async () => {
   if (!newReview.value.rating) {
     alert('평점을 선택해주세요.')
@@ -323,7 +317,6 @@ const submitReview = async () => {
 
   try {
     if (editingReview.value) {
-      // 수정
       await movieStore.updateReview(
         editingReview.value.id,
         newReview.value,
@@ -331,7 +324,6 @@ const submitReview = async () => {
       )
       alert('리뷰가 수정되었습니다!')
     } else {
-      // 작성
       await movieStore.createReview({
         movie: route.params.id,
         ...newReview.value
@@ -346,7 +338,6 @@ const submitReview = async () => {
   }
 }
 
-// 리뷰 수정 시작
 const startEditReview = (review) => {
   editingReview.value = review
   newReview.value = {
@@ -358,7 +349,6 @@ const startEditReview = (review) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// 리뷰 취소
 const cancelReview = () => {
   editingReview.value = null
   newReview.value = {
@@ -368,7 +358,6 @@ const cancelReview = () => {
   }
 }
 
-// 리뷰 삭제
 const handleDeleteReview = async (reviewId) => {
   if (confirm('정말 삭제하시겠습니까?')) {
     try {
@@ -380,17 +369,14 @@ const handleDeleteReview = async (reviewId) => {
   }
 }
 
-// 내 리뷰인지 확인
 const isMyReview = (review) => {
   return authStore.user?.username === review.user.username
 }
 
-// 스포일러 토글
 const toggleSpoiler = (review) => {
   review.showContent = !review.showContent
 }
 
-// 네비게이션
 const goToProfile = () => {
   router.push('/profile')
 }
@@ -411,7 +397,6 @@ const goToHome = () => {
   color: #fff;
 }
 
-/* 로딩 & 에러 */
 .loading, .error {
   display: flex;
   flex-direction: column;
@@ -444,7 +429,6 @@ const goToHome = () => {
   font-size: 16px;
 }
 
-/* 헤더 */
 .movie-header {
   display: flex;
   justify-content: space-between;
@@ -484,7 +468,6 @@ const goToHome = () => {
   transform: translateY(-2px);
 }
 
-/* 메인 컨텐츠 */
 .movie-content {
   display: grid;
   grid-template-columns: 300px 1fr 250px;
@@ -595,7 +578,6 @@ const goToHome = () => {
   font-size: 16px;
 }
 
-/* 리뷰 작성 버튼 */
 .btn-write-review {
   width: 100%;
   padding: 20px;
@@ -619,7 +601,6 @@ const goToHome = () => {
   background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
 }
 
-/* 리뷰 폼 */
 .review-form {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
@@ -748,7 +729,6 @@ const goToHome = () => {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* 리뷰 섹션 */
 .reviews-section {
   padding: 40px;
   max-width: 1400px;
@@ -914,7 +894,6 @@ const goToHome = () => {
   background: rgba(231, 76, 60, 0.3);
 }
 
-/* 애니메이션 */
 .slide-down-enter-active, .slide-down-leave-active {
   transition: all 0.3s ease;
 }
@@ -929,7 +908,6 @@ const goToHome = () => {
   transform: translateY(-20px);
 }
 
-/* 반응형 */
 @media (max-width: 1024px) {
   .movie-content {
     grid-template-columns: 250px 1fr;
