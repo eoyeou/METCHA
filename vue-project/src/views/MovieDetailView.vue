@@ -171,16 +171,30 @@
           class="review-card"
         >
           <div class="review-header">
-            <div class="review-user">
-              <img 
-                :src="review.user.profile_image || 'https://via.placeholder.com/40'" 
-                alt="프로필"
-                class="user-avatar"
+            <div class="review-user-section">
+              <div 
+                class="review-user clickable"
+                @click="goToUserProfile(review.user.id)"
               >
-              <div class="user-info">
-                <span class="username">{{ review.user.username }}</span>
-                <span class="review-date">{{ formatDate(review.created_at) }}</span>
+                <img 
+                  :src="review.user.profile_image || 'https://via.placeholder.com/40'" 
+                  alt="프로필"
+                  class="user-avatar"
+                >
+                <div class="user-info">
+                  <span class="username">{{ review.user.username }}</span>
+                  <span class="review-date">{{ formatDate(review.created_at) }}</span>
+                </div>
               </div>
+              <!-- 팔로우 버튼 (본인이 아니고 로그인한 경우만) -->
+              <button 
+                v-if="shouldShowFollowButton(review)"
+                @click.stop="toggleFollow(review.user.id, review.user)"
+                class="btn-follow-review"
+                :class="{ 'following': review.user.is_following }"
+              >
+                {{ review.user.is_following ? '언팔로우' : '팔로우' }}
+              </button>
             </div>
             <div class="review-rating">
               <span class="stars">{{ getStars(review.rating) }}</span>
@@ -237,11 +251,18 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMovieStore } from '@/stores/movie'
 import { useAuthStore } from '@/stores/auth'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
 const movieStore = useMovieStore()
 const authStore = useAuthStore()
+
+// Axios 기본 설정
+const API_URL = 'http://127.0.0.1:8000/api'
+if (authStore.token) {
+  axios.defaults.headers.common['Authorization'] = `Token ${authStore.token}`
+}
 
 const movie = computed(() => movieStore.currentMovie)
 const showReviewForm = ref(false)
@@ -257,13 +278,40 @@ const loadMovie = async () => {
   const movieId = route.params.id
   try {
     await movieStore.getMovieDetail(movieId)
+    // 로그인한 사용자 정보가 없으면 프로필 정보 가져오기
+    if (authStore.isAuthenticated && !authStore.user) {
+      try {
+        const API_URL = 'http://127.0.0.1:8000/api'
+        const response = await axios.get(`${API_URL}/accounts/profile/`, {
+          headers: {
+            'Authorization': `Token ${authStore.token}`
+          }
+        })
+        authStore.user = response.data
+      } catch (error) {
+        console.error('사용자 정보 로드 실패:', error)
+      }
+    }
   } catch (error) {
     console.error('영화 정보 로드 실패:', error)
   }
 }
 
-onMounted(() => {
-  loadMovie()
+onMounted(async () => {
+  // 로그인한 사용자 정보가 없으면 가져오기
+  if (authStore.isAuthenticated && !authStore.user) {
+    try {
+      const response = await axios.get(`${API_URL}/accounts/profile/`, {
+        headers: {
+          'Authorization': `Token ${authStore.token}`
+        }
+      })
+      authStore.user = response.data
+    } catch (error) {
+      console.error('사용자 정보 로드 실패:', error)
+    }
+  }
+  await loadMovie()
 })
 
 const getStars = (rating) => {
@@ -370,7 +418,54 @@ const handleDeleteReview = async (reviewId) => {
 }
 
 const isMyReview = (review) => {
-  return authStore.user?.username === review.user.username
+  if (!authStore.user || !review.user) return false
+  // ID와 username 둘 다 체크하여 더 정확하게 판단
+  return authStore.user.id === review.user.id || authStore.user.username === review.user.username
+}
+
+// 팔로우 버튼 표시 여부 결정
+const shouldShowFollowButton = (review) => {
+  // 로그인하지 않은 경우 표시 안 함
+  if (!authStore.isAuthenticated) {
+    return false
+  }
+  
+  // 리뷰 작성자 정보가 없는 경우 표시 안 함
+  if (!review || !review.user || !review.user.id) {
+    return false
+  }
+  
+  // 현재 로그인한 사용자 정보가 없는 경우 표시 안 함 (안전을 위해)
+  if (!authStore.user || !authStore.user.id) {
+    console.log('사용자 정보 없음 - 팔로우 버튼 숨김')
+    return false
+  }
+  
+  // 현재 로그인한 사용자와 리뷰 작성자가 같은 경우 표시 안 함 (가장 먼저 체크)
+  if (review.user.id === authStore.user.id) {
+    console.log('본인 리뷰 - 팔로우 버튼 숨김', {
+      reviewUserId: review.user.id,
+      currentUserId: authStore.user.id
+    })
+    return false
+  }
+  
+  // username으로도 체크 (ID가 없을 경우 대비)
+  if (review.user.username && authStore.user.username && review.user.username === authStore.user.username) {
+    console.log('본인 리뷰 (username) - 팔로우 버튼 숨김', {
+      reviewUsername: review.user.username,
+      currentUsername: authStore.user.username
+    })
+    return false
+  }
+  
+  // 본인 리뷰인 경우 표시 안 함
+  if (isMyReview(review)) {
+    console.log('isMyReview true - 팔로우 버튼 숨김')
+    return false
+  }
+  
+  return true
 }
 
 const toggleSpoiler = (review) => {
@@ -383,6 +478,54 @@ const goToProfile = () => {
 
 const goToHome = () => {
   router.push('/')
+}
+
+// 사용자 프로필로 이동
+const goToUserProfile = (userId) => {
+  router.push(`/profile?user=${userId}`)
+}
+
+// 팔로우/언팔로우 토글
+const toggleFollow = async (userId, user) => {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+  
+  const isFollowing = user.is_following
+  
+  try {
+    if (isFollowing) {
+      const response = await axios.delete(
+        `${API_URL}/accounts/users/${userId}/follow/`,
+        {
+          headers: {
+            'Authorization': `Token ${authStore.token}`
+          }
+        }
+      )
+      console.log('언팔로우 성공:', response.data)
+      user.is_following = false
+    } else {
+      const response = await axios.post(
+        `${API_URL}/accounts/users/${userId}/follow/`,
+        {},
+        {
+          headers: {
+            'Authorization': `Token ${authStore.token}`
+          }
+        }
+      )
+      console.log('팔로우 성공:', response.data)
+      user.is_following = true
+    }
+    // 영화 정보 새로고침하여 팔로워 수 업데이트
+    await loadMovie()
+  } catch (error) {
+    console.error('팔로우/언팔로우 실패:', error)
+    console.error('에러 상세:', error.response?.data)
+    alert(error.response?.data?.detail || error.response?.data?.message || '처리에 실패했습니다.')
+  }
 }
 </script>
 
@@ -776,10 +919,29 @@ const goToHome = () => {
   margin-bottom: 20px;
 }
 
+.review-user-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 .review-user {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.review-user.clickable {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.review-user.clickable:hover {
+  opacity: 0.8;
+}
+
+.review-user.clickable:hover .username {
+  color: #e94560;
 }
 
 .user-avatar {
@@ -798,6 +960,7 @@ const goToHome = () => {
 .username {
   font-weight: bold;
   font-size: 16px;
+  transition: color 0.3s;
 }
 
 .review-date {
@@ -837,6 +1000,36 @@ const goToHome = () => {
   filter: none;
   user-select: auto;
   cursor: auto;
+}
+
+.btn-follow-review {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #4a90e2;
+  background: #4a90e2;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-follow-review:hover {
+  background: #357abd;
+  border-color: #357abd;
+}
+
+.btn-follow-review.following {
+  background: transparent;
+  color: #4a90e2;
+  border-color: #4a90e2;
+}
+
+.btn-follow-review.following:hover {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  color: white;
 }
 
 .btn-spoiler {

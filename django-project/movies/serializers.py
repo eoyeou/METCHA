@@ -13,10 +13,21 @@ class GenreSerializer(serializers.ModelSerializer):
 
 '''리뷰 작성자 정보'''
 class ReviewUserSerializer(serializers.ModelSerializer):
-                                                                
+    is_following = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'profile_image']
+        fields = ['id', 'username', 'profile_image', 'is_following']
+    
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from accounts.models import Follow
+            return Follow.objects.filter(
+                follower=request.user,
+                following=obj
+            ).exists()
+        return False
 
 
 class ReviewSerializer(serializers.ModelSerializer):

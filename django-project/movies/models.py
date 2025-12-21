@@ -14,10 +14,11 @@ class Genre(models.Model):
 
 
 class Movie(models.Model):
-
-    title = models.CharField(max_length=200)
-    original_title = models.CharField(max_length=200, blank=True)
-    description = models.TextField()
+    tmdb_id = models.IntegerField(unique=True, null=True, blank=True, help_text="TMDB 영화 ID")
+    title = models.CharField(max_length=200, help_text="한국어 제목")
+    original_title = models.CharField(max_length=200, blank=True, help_text="영어 원제")
+    description = models.TextField(help_text="영어 설명 (AI embedding용)")
+    kor_description = models.TextField(blank=True, help_text="한국어 설명 (UI 표시용)")
     poster_url = models.URLField(max_length=500, blank=True)
     release_year = models.IntegerField()
     runtime = models.IntegerField(help_text="상영 시간 (분)")
@@ -36,6 +37,7 @@ class Movie(models.Model):
         indexes = [
             models.Index(fields=['title']),
             models.Index(fields=['release_year']),
+            models.Index(fields=['tmdb_id']),
         ]
 
     def __str__(self):

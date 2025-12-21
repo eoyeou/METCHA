@@ -21,5 +21,5 @@ def movie_detail(request, movie_pk):
         Movie.objects.prefetch_related('genres', 'reviews__user'), 
         pk=movie_pk
     )
-    serializer = MovieDetailSerializer(movie)
+    serializer = MovieDetailSerializer(movie, context={'request': request})
     return Response(serializer.data)
