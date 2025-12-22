@@ -13,7 +13,12 @@
               placeholder="영화 제목으로 검색..."
               class="search-input"
             />
-            <button @click="performSearch" class="search-btn">🔍</button>
+            <button @click="performSearch" class="search-btn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                <path d="m14 14 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -267,14 +272,12 @@ const handleLogout = async () => {
 }
 
 .logo {
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  background: linear-gradient(45deg, #e94560, #f39c12);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-size: 1.5rem;
+  cursor: none;
+  color: var(--text-primary);
 }
 
 .search-box-container {
@@ -292,8 +295,8 @@ const handleLogout = async () => {
 }
 
 .search-box:focus-within {
-  border-color: #e94560;
-  box-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+  border-color: #555;
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.3);
 }
 
 .search-input {
@@ -311,15 +314,35 @@ const handleLogout = async () => {
 }
 
 .search-btn {
-  padding: 15px 25px;
+  padding: 15px 0 15px 20px;
   background: transparent;
   border: none;
-  font-size: 20px;
-  cursor: pointer;
-  transition: transform 0.3s;
+  cursor: none;
+  color: var(--text-primary);
+  transition: all 0.3s;
+  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: all 0.3s;
+}
+
+.search-box:focus-within .search-btn {
+  opacity: 1;
+  color: var(--accent-acid);
 }
 
 .search-btn:hover {
+  opacity: 1;
+  color: var(--accent-acid);
+}
+
+.search-btn:hover svg {
   transform: scale(1.1);
 }
 
@@ -419,7 +442,7 @@ const handleLogout = async () => {
 .movie-card:hover {
   transform: translateY(-10px) scale(1.05);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
-  border-color: rgba(233, 69, 96, 0.5);
+  border-color: #555;
 }
 
 .movie-poster-wrapper {
@@ -484,8 +507,8 @@ const handleLogout = async () => {
 
 .genre-tag {
   padding: 3px 8px;
-  background: rgba(233, 69, 96, 0.2);
-  border: 1px solid rgba(233, 69, 96, 0.4);
+  background: rgba(204, 255, 0, 0.1);
+  border: 1px solid var(--accent-acid);
   border-radius: 12px;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.9);

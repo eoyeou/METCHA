@@ -5,11 +5,15 @@ from movies.models import Movie
 
 
 class Watchlist(models.Model):
-    """시청 목록 모델"""
+    """
+    위시리스트 모델
+    사용자가 보고싶은 영화를 저장하는 기능
+    현재는 'want' 상태만 사용 (위시리스트)
+    """
     STATUS_CHOICES = [
-        ('want', '보고싶어요'),
-        ('watching', '보는중'),
-        ('watched', '봤어요'),
+        ('want', '보고싶어요'),  # 위시리스트 (현재 사용 중)
+        ('watching', '보는중'),  # 미사용 (향후 확장 가능)
+        ('watched', '봤어요'),  # 미사용 (리뷰와 중복)
     ]
 
     user = models.ForeignKey(
