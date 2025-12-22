@@ -176,6 +176,50 @@
         </div>
       </transition>
 
+      <!-- 비슷한 영화 -->
+      <div v-if="similarMovies.length > 0" class="similar-movies-section">
+        <h2>비슷한 영화</h2>
+        <div class="similar-movies-container">
+          <button 
+            @click="scrollSimilarMovies('left')" 
+            class="slider-btn slider-btn-left"
+            :disabled="!canScrollSimilarLeft"
+          >
+            ‹
+          </button>
+          <div 
+            ref="similarMoviesRef"
+            class="similar-movies-slider"
+            @scroll="updateSimilarScrollButtons"
+          >
+            <div
+              v-for="similarMovie in similarMovies"
+              :key="similarMovie.id"
+              @click="goToMovie(similarMovie.id)"
+              class="similar-movie-card"
+            >
+              <img 
+                :src="similarMovie.poster_url || 'https://via.placeholder.com/200x300'" 
+                :alt="similarMovie.title"
+                class="similar-movie-poster"
+              >
+              <div class="similar-movie-info">
+                <h3>{{ similarMovie.title }}</h3>
+                <p class="similar-movie-year">{{ similarMovie.release_year }}</p>
+                <p class="similar-movie-rating">⭐ {{ similarMovie.avg_rating.toFixed(1) }}</p>
+              </div>
+            </div>
+          </div>
+          <button 
+            @click="scrollSimilarMovies('right')" 
+            class="slider-btn slider-btn-right"
+            :disabled="!canScrollSimilarRight"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
       <!-- 리뷰 목록 -->
       <div class="reviews-section">
         <h2>리뷰 {{ movie.reviews.length }}개</h2>
@@ -271,7 +315,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMovieStore } from '@/stores/movie'
 import { useAuthStore } from '@/stores/auth'
@@ -293,6 +337,10 @@ const showReviewForm = ref(false)
 const editingReview = ref(null)
 const isInWatchlist = ref(false)
 const isTogglingWatchlist = ref(false)
+const similarMovies = ref([])
+const similarMoviesRef = ref(null)
+const canScrollSimilarLeft = ref(false)
+const canScrollSimilarRight = ref(true)
 
 const newReview = ref({
   rating: 0,
@@ -322,9 +370,70 @@ const loadMovie = async () => {
     if (authStore.isAuthenticated) {
       await checkWatchlist(movieId)
     }
+    
+    // 비슷한 영화 가져오기
+    await loadSimilarMovies(movieId)
   } catch (error) {
     console.error('영화 정보 로드 실패:', error)
   }
+}
+
+// 비슷한 영화 가져오기
+const loadSimilarMovies = async (movieId) => {
+  try {
+    const response = await axios.get(`${API_URL}/movies/${movieId}/similar/`)
+    similarMovies.value = response.data
+    // DOM 업데이트 후 스크롤 버튼 상태 확인
+    await nextTick()
+    updateSimilarScrollButtons()
+  } catch (error) {
+    console.error('비슷한 영화 로드 실패:', error)
+    similarMovies.value = []
+  }
+}
+
+// 비슷한 영화 슬라이더 스크롤
+const scrollSimilarMovies = (direction) => {
+  if (!similarMoviesRef.value) return
+  
+  const scrollAmount = 600
+  const currentScroll = similarMoviesRef.value.scrollLeft
+  
+  if (direction === 'left') {
+    similarMoviesRef.value.scrollTo({
+      left: currentScroll - scrollAmount,
+      behavior: 'smooth'
+    })
+  } else {
+    similarMoviesRef.value.scrollTo({
+      left: currentScroll + scrollAmount,
+      behavior: 'smooth'
+    })
+  }
+}
+
+// 비슷한 영화 스크롤 버튼 상태 업데이트
+const updateSimilarScrollButtons = () => {
+  if (!similarMoviesRef.value) return
+  
+  const { scrollLeft, scrollWidth, clientWidth } = similarMoviesRef.value
+  canScrollSimilarLeft.value = scrollLeft > 0
+  canScrollSimilarRight.value = scrollLeft < scrollWidth - clientWidth - 10
+}
+
+// 영화 상세 페이지로 이동
+const goToMovie = async (movieId) => {
+  // 같은 페이지에 있으면 스크롤을 맨 위로
+  if (route.params.id === movieId.toString()) {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  
+  // 다른 영화로 이동
+  router.push(`/movies/${movieId}`).then(() => {
+    // 페이지 이동 후 데이터 로드
+    loadMovie()
+  })
 }
 
 // 위시리스트 확인
@@ -451,6 +560,16 @@ onMounted(async () => {
     }
   }
   await loadMovie()
+})
+
+// 라우트 파라미터 변경 감지 (같은 컴포넌트 내에서 다른 영화로 이동할 때)
+watch(() => route.params.id, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    // 페이지 맨 위로 스크롤
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // 새로운 영화 데이터 로드
+    await loadMovie()
+  }
 })
 
 const getStars = (rating) => {
@@ -1063,6 +1182,121 @@ const toggleFollow = async (userId, user) => {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* 비슷한 영화 섹션 */
+.similar-movies-section {
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.similar-movies-section h2 {
+  font-size: 32px;
+  margin-bottom: 30px;
+}
+
+.similar-movies-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.similar-movies-slider {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 10px 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  /* 스크롤바 숨기기 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.similar-movies-slider::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.similar-movie-card {
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 15px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  flex: 0 0 200px;
+  min-width: 200px;
+  max-width: 200px;
+}
+
+.similar-movie-card:hover {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+}
+
+.similar-movie-poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+}
+
+.similar-movie-info {
+  padding: 15px;
+}
+
+.similar-movie-info h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-movie-year {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 5px;
+}
+
+.similar-movie-rating {
+  font-size: 14px;
+  color: #f39c12;
+}
+
+/* 슬라이더 버튼 (비슷한 영화 섹션용) */
+.similar-movies-container .slider-btn {
+  width: 60px;
+  height: 380px; /* 영화 카드 전체 높이: 포스터(300px) + 정보영역(약80px) */
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+}
+
+.similar-movies-container .slider-btn:hover:not(:disabled) {
+  background: rgba(233, 69, 96, 0.8);
+  border-color: #e94560;
+  transform: scale(1.05);
+}
+
+.similar-movies-container .slider-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .reviews-section {
   padding: 40px;
   max-width: 1400px;
@@ -1319,6 +1553,22 @@ const toggleFollow = async (userId, user) => {
   
   .movie-title {
     font-size: 28px;
+  }
+  
+  .similar-movies-section {
+    padding: 20px;
+  }
+  
+  .similar-movie-card {
+    flex: 0 0 150px;
+    min-width: 150px;
+    max-width: 150px;
+  }
+  
+  .similar-movies-container .slider-btn {
+    width: 50px;
+    height: 285px; /* 모바일 영화 카드 전체 높이: 포스터(225px) + 정보영역(약60px) */
+    font-size: 35px;
   }
   
   .reviews-section {

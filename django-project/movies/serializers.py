@@ -57,7 +57,7 @@ class MovieListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
         fields = ['id', 'title', 'original_title', 'poster_url', 'release_year', 
-                  'avg_rating', 'review_count', 'genres']
+                  'avg_rating', 'review_count', 'genres', 'kor_description']
 
 ''' 영화 상세용 - 모든 정보 + 리뷰'''
 class MovieDetailSerializer(serializers.ModelSerializer):

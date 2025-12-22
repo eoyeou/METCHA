@@ -33,14 +33,49 @@
 
     <div class="profile-content">
       <div class="profile-info">
-        <div class="profile-image-placeholder">
-          <img 
-            v-if="userProfile?.profile_image" 
-            :src="userProfile.profile_image" 
-            alt="Profile"
-            class="profile-image"
-          />
-          <div v-else class="profile-image-placeholder-text">User Profile Image</div>
+        <div class="profile-image-container">
+          <div class="profile-image-placeholder">
+            <img 
+              v-if="previewImage || userProfile?.profile_image" 
+              :src="previewImage || userProfile?.profile_image" 
+              alt="Profile"
+              class="profile-image"
+            />
+            <div v-else class="profile-image-placeholder-text">User Profile Image</div>
+          </div>
+          <!-- 본인 프로필일 때만 이미지 업로드 버튼 표시 -->
+          <div v-if="isOwnProfile" class="profile-image-upload">
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/*"
+              @change="handleImageSelect"
+              style="display: none"
+            />
+            <button 
+              @click="triggerFileInput"
+              class="btn-upload-image"
+              :disabled="isUploading"
+            >
+              {{ isUploading ? '업로드 중...' : (userProfile?.profile_image ? '프로필 사진 변경' : '프로필 사진 등록') }}
+            </button>
+            <button 
+              v-if="previewImage"
+              @click="uploadImage"
+              class="btn-save-image"
+              :disabled="isUploading"
+            >
+              저장
+            </button>
+            <button 
+              v-if="previewImage"
+              @click="cancelImageUpload"
+              class="btn-cancel-image"
+              :disabled="isUploading"
+            >
+              취소
+            </button>
+          </div>
         </div>
         
         <div class="profile-stats">
@@ -326,7 +361,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
@@ -358,6 +393,20 @@ const showFollowingModal = ref(false)
 const followers = ref([])
 const following = ref([])
 const currentUserId = ref(null)
+
+// 프로필 이미지 업로드 관련
+const fileInput = ref(null)
+const previewImage = ref(null)
+const selectedFile = ref(null)
+const isUploading = ref(false)
+
+// 본인 프로필인지 확인하는 computed
+const isOwnProfile = computed(() => {
+  if (!authStore.isAuthenticated || !userProfile.value || !authStore.user?.id) {
+    return false
+  }
+  return userProfile.value.is_self || userProfile.value.id === authStore.user.id
+})
 
 // 프로필 정보 가져오기
 const fetchProfile = async () => {
@@ -965,11 +1014,100 @@ const goToUserProfile = (userId) => {
 }
 
 onMounted(async () => {
+  // 토큰이 있지만 사용자 정보가 없으면 가져오기
+  if (authStore.token && !authStore.user) {
+    await authStore.fetchUser()
+  }
   await fetchProfile()
   await fetchReviews()
   await fetchWatchlist()
   await fetchPreferenceReport()
 })
+
+// 프로필 이미지 업로드 관련 함수들
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleImageSelect = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    // 파일 크기 체크 (5MB 제한)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('이미지 크기는 5MB 이하여야 합니다.')
+      return
+    }
+    
+    // 파일 타입 체크
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+    
+    selectedFile.value = file
+    
+    // 미리보기 생성
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      previewImage.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const uploadImage = async () => {
+  if (!selectedFile.value) return
+  
+  isUploading.value = true
+  
+  try {
+    const formData = new FormData()
+    formData.append('profile_image', selectedFile.value)
+    
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Token ${authStore.token}`
+      }
+    }
+    
+    const url = `${API_URL}/accounts/profile/`
+    const response = await axios.patch(url, formData, config)
+    
+    // 프로필 정보 업데이트
+    userProfile.value = response.data
+    
+    // 미리보기 및 선택된 파일 초기화
+    previewImage.value = null
+    selectedFile.value = null
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+    
+    // authStore의 사용자 정보도 업데이트
+    if (authStore.user) {
+      authStore.user.profile_image = response.data.profile_image
+    }
+    
+    // 프로필 정보 다시 가져오기 (이미지 URL 업데이트)
+    await fetchProfile()
+    
+    alert('프로필 이미지가 업로드되었습니다.')
+  } catch (error) {
+    console.error('이미지 업로드 실패:', error)
+    alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.')
+  } finally {
+    isUploading.value = false
+  }
+}
+
+const cancelImageUpload = () => {
+  previewImage.value = null
+  selectedFile.value = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
 </script>
 
 <style scoped>
@@ -1051,28 +1189,92 @@ onMounted(async () => {
   margin-bottom: 30px;
 }
 
+.profile-image-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  flex-shrink: 0;
+}
+
 .profile-image-placeholder {
   width: 150px;
   height: 150px;
   background: #e0e0e0;
-  border-radius: 8px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  overflow: hidden;
+  border: 3px solid #ddd;
+  position: relative;
 }
 
 .profile-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 50%;
 }
 
 .profile-image-placeholder-text {
   color: #999;
   font-size: 12px;
   text-align: center;
+  padding: 10px;
+}
+
+.profile-image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-upload-image,
+.btn-save-image,
+.btn-cancel-image {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-upload-image:hover:not(:disabled) {
+  background: #4a90e2;
+  color: white;
+  border-color: #4a90e2;
+}
+
+.btn-save-image {
+  background: #27ae60;
+  color: white;
+  border-color: #27ae60;
+}
+
+.btn-save-image:hover:not(:disabled) {
+  background: #229954;
+}
+
+.btn-cancel-image {
+  background: #e74c3c;
+  color: white;
+  border-color: #e74c3c;
+}
+
+.btn-cancel-image:hover:not(:disabled) {
+  background: #c0392b;
+}
+
+.btn-upload-image:disabled,
+.btn-save-image:disabled,
+.btn-cancel-image:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .profile-stats {
