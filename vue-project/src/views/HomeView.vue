@@ -62,7 +62,13 @@
       <!-- 인기 영화 목록 (검색 안 할 때) -->
       <div v-if="!searchQuery" class="popular-movies">
         <h2>인기 영화</h2>
-        <div class="movie-grid">
+        <div v-if="popularMovies.length === 0" class="empty-state">
+          <p>영화를 불러오는 중...</p>
+          <p style="font-size: 12px; color: #aaa; margin-top: 10px;">
+            콘솔(F12)을 확인하여 디버깅 정보를 확인하세요.
+          </p>
+        </div>
+        <div v-else class="movie-grid">
           <div
             v-for="movie in popularMovies"
             :key="movie.id"
@@ -104,11 +110,46 @@ const API_URL = 'http://127.0.0.1:8000/api'
 
 // 페이지 로드 시 인기 영화 가져오기
 onMounted(async () => {
+  console.log('=== 영화 목록 로드 시작 ===')
+  console.log('API URL:', `${API_URL}/movies/`)
+  
   try {
+    console.log('API 호출 중...')
     const response = await axios.get(`${API_URL}/movies/`)
-    popularMovies.value = response.data.slice(0, 12) // 상위 12개만
+    console.log('✅ API 응답 받음!')
+    console.log('응답 상태:', response.status)
+    console.log('응답 데이터 타입:', typeof response.data)
+    console.log('배열인가?', Array.isArray(response.data))
+    console.log('데이터 길이:', Array.isArray(response.data) ? response.data.length : 'N/A')
+    
+    // REST Framework pagination이 활성화되어 있으면 results를 사용
+    let movies = []
+    if (Array.isArray(response.data)) {
+      movies = response.data
+      console.log('✅ 배열로 받음, 영화 개수:', movies.length)
+    } else if (response.data && response.data.results && Array.isArray(response.data.results)) {
+      movies = response.data.results
+      console.log('✅ pagination 형식으로 받음, 영화 개수:', movies.length)
+    } else {
+      console.error('❌ 예상하지 못한 형식:', response.data)
+      return
+    }
+    
+    console.log('처리할 영화 개수:', movies.length)
+    popularMovies.value = movies.slice(0, 12) // 상위 12개만
+    console.log('✅ popularMovies에 저장된 개수:', popularMovies.value.length)
+    console.log('첫 번째 영화:', popularMovies.value[0])
+    console.log('=== 완료 ===')
   } catch (error) {
-    console.error('영화 목록 로드 실패:', error)
+    console.error('❌ 영화 목록 로드 실패!')
+    console.error('에러:', error)
+    console.error('에러 메시지:', error.message)
+    if (error.response) {
+      console.error('응답 상태:', error.response.status)
+      console.error('응답 데이터:', error.response.data)
+    } else if (error.request) {
+      console.error('요청은 보냈지만 응답이 없음 - 서버가 실행 중인지 확인!')
+    }
   }
 })
 
@@ -127,9 +168,11 @@ const handleSearch = () => {
   searchTimeout = setTimeout(async () => {
     try {
       const response = await axios.get(`${API_URL}/movies/`)
+      // REST Framework pagination이 활성화되어 있으면 results를 사용
+      const movies = response.data.results || response.data
       
       // 제목으로 필터링 (대소문자 구분 없이)
-      searchResults.value = response.data.filter(movie =>
+      searchResults.value = movies.filter(movie =>
         movie.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
         movie.original_title?.toLowerCase().includes(searchQuery.value.toLowerCase())
       ).slice(0, 5) // 최대 5개만 표시
@@ -409,6 +452,16 @@ onMounted(() => {
 .movie-rating {
   font-size: 14px;
   color: #f39c12;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+}
+
+.empty-state p {
+  margin: 10px 0;
 }
 
 /* 반응형 */

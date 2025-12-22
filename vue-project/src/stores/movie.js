@@ -75,6 +75,18 @@ export const useMovieStore = defineStore('movie', () => {
     }
   }
 
+  // 리뷰 좋아요
+  const toggleReviewLike = async (reviewId, movieId) => {
+    try {
+      const response = await axios.post(`${API_URL}/reviews/${reviewId}/like/`)
+      await getMovieDetail(movieId)
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.detail || '좋아요 처리에 실패했습니다.'
+      throw err
+    }
+  }
+
   return {
     currentMovie,
     isLoading,
@@ -82,6 +94,7 @@ export const useMovieStore = defineStore('movie', () => {
     getMovieDetail,
     createReview,
     updateReview,
-    deleteReview
+    deleteReview,
+    toggleReviewLike
   }
 })
