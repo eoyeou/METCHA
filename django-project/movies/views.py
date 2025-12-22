@@ -11,33 +11,61 @@ from .serializers import MovieDetailSerializer, MovieListSerializer
 @api_view(['GET'])
 def movie_list(request):
     """영화 목록 조회 (필터링 지원)"""
-    movies = Movie.objects.all().prefetch_related('genres')
+    # ManyToMany 관계이므로 prefetch_related 사용
+    movies = Movie.objects.prefetch_related('genres').all()
     
     # 쿼리 파라미터로 필터링
     genre = request.GET.get('genre')
     order_by = request.GET.get('order_by', '-created_at')  # 기본값: 최신순
     
     if genre:
-        # 장르별 필터링 (대소문자 구분 없이)
-        # 한국어/영어 모두 지원
+        # 장르별 필터링
+        from django.db.models import Q
+        from .models import Genre
+        
+        # DB에 있는 실제 장르 이름 확인
+        all_genres = Genre.objects.values_list('genre_name', flat=True)
+        print(f"[장르 필터링] 요청된 장르: {genre}")
+        print(f"[장르 필터링] DB에 있는 장르 목록: {list(all_genres)}")
+        
+        # 장르 매핑 (한국어 <-> 영어)
         genre_mapping = {
-            '드라마': ['드라마', 'Drama', 'drama'],
-            '액션': ['액션', 'Action', 'action'],
-            '공포': ['공포', 'Horror', 'horror'],
-            '코미디': ['코미디', 'Comedy', 'comedy'],
-            'Drama': ['드라마', 'Drama', 'drama'],
-            'Action': ['액션', 'Action', 'action'],
-            'Horror': ['공포', 'Horror', 'horror'],
-            'Comedy': ['코미디', 'Comedy', 'comedy'],
+            '드라마': ['드라마', 'Drama'],
+            '액션': ['액션', 'Action'],
+            '공포': ['공포', 'Horror'],
+            '코미디': ['코미디', 'Comedy'],
+            'Drama': ['드라마', 'Drama'],
+            'Action': ['액션', 'Action'],
+            'Horror': ['공포', 'Horror'],
+            'Comedy': ['코미디', 'Comedy'],
         }
         
         # 매핑된 장르 이름들로 검색
         search_terms = genre_mapping.get(genre, [genre])
-        from django.db.models import Q
-        query = Q()
+        
+        # DB에 실제로 존재하는 장르 이름만 사용
+        valid_terms = []
         for term in search_terms:
-            query |= Q(genres__genre_name__icontains=term)
+            # 정확히 일치하는 장르 찾기
+            matching_genres = [g for g in all_genres if term.lower() in g.lower() or g.lower() in term.lower()]
+            if matching_genres:
+                valid_terms.extend(matching_genres)
+        
+        if not valid_terms:
+            # 매핑이 없으면 원본 검색어 사용
+            valid_terms = [genre]
+        
+        print(f"[장르 필터링] 검색할 장르 이름: {valid_terms}")
+        
+        # 장르 필터링
+        query = Q()
+        for term in valid_terms:
+            query |= Q(genres__genre_name__iexact=term) | Q(genres__genre_name__icontains=term)
+        
         movies = movies.filter(query).distinct()
+        
+        # 디버깅: 필터링된 영화 수 확인
+        print(f"[장르 필터링] 결과: {movies.count()}개 영화")
     
     # 정렬
     if order_by == 'rating':
@@ -47,7 +75,22 @@ def movie_list(request):
     else:
         movies = movies.order_by('-created_at')
     
+    # 디버깅: 첫 번째 영화의 장르 확인
+    if movies.exists():
+        first_movie = movies.first()
+        print(f"[디버깅] 첫 번째 영화: {first_movie.title}")
+        print(f"[디버깅] 장르 개수: {first_movie.genres.count()}")
+        if first_movie.genres.exists():
+            print(f"[디버깅] 장르 목록: {[g.genre_name for g in first_movie.genres.all()]}")
+        else:
+            print(f"[디버깅] 장르가 없습니다!")
+    
     serializer = MovieListSerializer(movies, many=True)
+    
+    # 디버깅: 직렬화된 첫 번째 영화의 장르 확인
+    if serializer.data:
+        print(f"[디버깅] 직렬화된 첫 번째 영화 장르: {serializer.data[0].get('genres', [])}")
+    
     return Response(serializer.data)
 
 
