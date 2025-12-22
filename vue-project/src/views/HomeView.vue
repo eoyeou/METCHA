@@ -306,16 +306,151 @@ const loadTopRatedMovies = async () => {
 
 const loadGenreMovies = async (genreSection) => {
   try {
-    const response = await axios.get(`${API_URL}/movies/`, {
-      params: { genre: genreSection.genre, order_by: 'rating' }
+    console.log(`[장르 영화 로드 시작] ${genreSection.title} (장르: ${genreSection.genre})`)
+    
+    // 먼저 전체 영화 목록 가져오기
+    const allMoviesResponse = await axios.get(`${API_URL}/movies/`)
+    let allMovies = Array.isArray(allMoviesResponse.data) ? allMoviesResponse.data : (allMoviesResponse.data?.results || [])
+    console.log(`[전체 영화] ${allMovies.length}개`)
+    
+    // 프론트엔드에서 장르 필터링
+    // 디버깅: 장르가 있는 영화들 확인
+    const moviesWithGenres = allMovies.filter(m => m.genres && m.genres.length > 0)
+    const moviesWithoutGenres = allMovies.filter(m => !m.genres || m.genres.length === 0)
+    
+    console.log(`[디버깅] 전체 영화: ${allMovies.length}개`)
+    console.log(`[디버깅] 장르가 있는 영화: ${moviesWithGenres.length}개`)
+    console.log(`[디버깅] 장르가 없는 영화: ${moviesWithoutGenres.length}개`)
+    
+    if (moviesWithGenres.length > 0) {
+      const firstMovie = moviesWithGenres[0]
+      console.log(`[디버깅] 장르가 있는 첫 번째 영화:`, {
+        title: firstMovie.title,
+        genres: firstMovie.genres,
+        firstGenre: firstMovie.genres[0],
+        firstGenreKeys: firstMovie.genres[0] ? Object.keys(firstMovie.genres[0]) : []
+      })
+      
+      // 실제 장르 이름 추출 테스트
+      const testGenres = firstMovie.genres.map(g => {
+        if (typeof g === 'string') return g
+        return g?.genre_name || g?.name || String(g)
+      })
+      console.log(`[디버깅] 추출된 장르 이름들:`, testGenres)
+      
+      // 모든 영화의 장르 목록 수집 (중복 제거)
+      const allGenreNames = new Set()
+      moviesWithGenres.slice(0, 20).forEach(m => {
+        m.genres.forEach(g => {
+          const genreName = typeof g === 'string' ? g : (g?.genre_name || g?.name)
+          if (genreName) allGenreNames.add(genreName)
+        })
+      })
+      console.log(`[디버깅] DB에 있는 장르 목록 (샘플 20개 영화 기준):`, Array.from(allGenreNames).sort())
+    }
+    
+    const filteredMovies = allMovies.filter(movie => {
+      if (!movie.genres || !Array.isArray(movie.genres) || movie.genres.length === 0) {
+        return false
+      }
+      
+      // 장르 이름 매핑 (한국어/영어 모두) - TMDB 한국어 장르명 포함
+      const genreMap = {
+        '드라마': ['드라마', 'drama', '드라', '드라마틱'],
+        '액션': ['액션', 'action', '액', '액션/어드벤처'],
+        '공포': ['공포', 'horror', '호러', '스릴러', 'thriller'],
+        '코미디': ['코미디', 'comedy', '코미', '코미디/로맨스'],
+      }
+      
+      const searchTerms = genreMap[genreSection.genre] || [genreSection.genre.toLowerCase()]
+      
+      // 디버깅: 첫 번째 영화의 장르와 검색어 비교
+      if (allMovies.indexOf(movie) === 0 && genreSection.genre === '드라마') {
+        console.log(`[디버깅] 첫 번째 영화 필터링 테스트:`, {
+          movieTitle: movie.title,
+          movieGenres: movie.genres.map(g => typeof g === 'string' ? g : (g?.genre_name || g?.name)),
+          searchTerms,
+          genreSection: genreSection.genre
+        })
+      }
+      
+      // 영화의 장르 이름 추출 (간단하게)
+      const movieGenreNames = movie.genres.map(g => {
+        if (typeof g === 'string') return g
+        if (g && typeof g === 'object') return g.genre_name || g.name || ''
+        return ''
+      }).filter(name => name && name.trim())
+      
+      // 대소문자 구분 없이 비교
+      const movieGenresLower = movieGenreNames.map(name => name.toLowerCase().trim())
+      
+      // 검색어와 매칭되는지 확인
+      const matches = searchTerms.some(searchTerm => {
+        const searchTermLower = searchTerm.toLowerCase().trim()
+        return movieGenresLower.some(movieGenre => {
+          // 정확히 일치
+          if (movieGenre === searchTermLower) return true
+          // 포함 관계 확인
+          if (movieGenre.includes(searchTermLower) || searchTermLower.includes(movieGenre)) return true
+          return false
+        })
+      })
+      
+      return matches
     })
-    let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
-    genreSection.movies = movies.slice(0, 10)
-    console.log(`${genreSection.title}: ${movies.length}개 영화 로드됨`)
+    
+    // 디버깅: 매칭된 영화들 확인
+    if (filteredMovies.length > 0) {
+      console.log(`[매칭 성공] ${genreSection.title}:`, filteredMovies.slice(0, 3).map(m => ({
+        title: m.title,
+        genres: m.genres.map(g => typeof g === 'string' ? g : (g?.genre_name || g?.name))
+      })))
+    }
+    
+    console.log(`[장르 필터링 후] ${genreSection.title}: ${filteredMovies.length}개`)
+    
+    // 디버깅: 필터링이 실패한 경우 샘플 확인
+    if (filteredMovies.length === 0 && moviesWithGenres.length > 0) {
+      // 장르가 있는 영화 중에서 해당 장르가 있는지 확인
+      const sampleMovies = moviesWithGenres.slice(0, 5)
+      const genreMap = {
+        '드라마': ['드라마', 'drama', '드라', '드라마틱'],
+        '액션': ['액션', 'action', '액', '액션/어드벤처'],
+        '공포': ['공포', 'horror', '호러', '스릴러', 'thriller'],
+        '코미디': ['코미디', 'comedy', '코미', '코미디/로맨스'],
+      }
+      const searchTerms = genreMap[genreSection.genre] || [genreSection.genre.toLowerCase()]
+      
+      console.log(`[디버깅] 필터링 실패 - 샘플 영화들:`, {
+        searchGenre: genreSection.genre,
+        searchTerms,
+        sampleMovies: sampleMovies.map(m => ({
+          title: m.title,
+          genres: m.genres.map(g => typeof g === 'string' ? g : (g?.genre_name || g?.name))
+        }))
+      })
+    }
+    
+    // 평점순으로 정렬
+    const sortedMovies = filteredMovies.sort((a, b) => {
+      if (b.avg_rating !== a.avg_rating) {
+        return b.avg_rating - a.avg_rating
+      }
+      return b.review_count - a.review_count
+    })
+    
+    genreSection.movies = sortedMovies.slice(0, 10)
+    console.log(`[장르 영화 최종] ${genreSection.title}: ${genreSection.movies.length}개 표시`)
+    
+    // 디버깅: 첫 번째 영화의 장르 정보 출력
+    if (genreSection.movies.length > 0) {
+      console.log(`[첫 번째 영화 장르] ${genreSection.movies[0].title}:`, genreSection.movies[0].genres?.map(g => g.genre_name))
+    }
+    
     await nextTick()
     updateGenreScrollButtons(genreSection.genre)
   } catch (error) {
-    console.error(`${genreSection.title} 영화 로드 실패:`, error)
+    console.error(`[장르 영화 로드 실패] ${genreSection.title}:`, error)
     console.error('에러 상세:', error.response?.data || error.message)
     // 에러가 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록
     genreSection.movies = []
