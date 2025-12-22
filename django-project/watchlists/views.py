@@ -12,7 +12,11 @@ from movies.models import Movie
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def watchlist_list(request):
-    """위시리스트 목록 조회 및 추가"""
+    """
+    위시리스트 목록 조회 및 추가
+    - GET: 사용자의 위시리스트 목록 조회
+    - POST: 위시리스트에 영화 추가 (status='want'로 저장)
+    """
     if request.method == 'GET':
         watchlists = Watchlist.objects.filter(user=request.user).select_related('movie').prefetch_related('movie__genres')
         serializer = WatchlistSerializer(watchlists, many=True)

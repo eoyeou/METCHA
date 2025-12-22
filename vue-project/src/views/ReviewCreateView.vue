@@ -297,28 +297,36 @@ const goToProfile = () => router.push('/profile')
 <style scoped>
 .review-create-container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
-  color: #fff;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: #050505;
 }
 
 /* 헤더 */
 .review-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 40px;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
+  z-index: 100;
+  mix-blend-mode: difference;
 }
 
 .logo {
-  font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  background: linear-gradient(45deg, #e94560, #f39c12);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-size: 1.5rem;
+  cursor: none;
+  color: var(--text-primary);
 }
 
 .header-buttons {
@@ -328,38 +336,51 @@ const goToProfile = () => router.push('/profile')
 
 .btn-header {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  color: var(--text-primary);
+  border-radius: 0;
+  cursor: none;
   transition: all 0.3s;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
 }
 
 .btn-header:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  border-color: var(--accent-acid);
 }
 
 /* 메인 */
 .review-main {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 40px 20px;
+  max-width: 100%;
+  margin: 0;
+  padding: 100px 40px 40px;
+  width: 100%;
 }
 
 .review-form-container {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  border-radius: 0;
+  padding: 60px 40px;
+  border: none;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .page-title {
-  font-size: 32px;
-  margin-bottom: 30px;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  margin-bottom: 60px;
+  color: #333;
+  text-transform: uppercase;
   text-align: center;
+  letter-spacing: 2px;
+  font-weight: 700;
 }
 
 /* 선택된 영화 박스 (상세 페이지에서 온 경우) */
@@ -368,10 +389,11 @@ const goToProfile = () => router.push('/profile')
   align-items: center;
   gap: 20px;
   padding: 20px;
-  background: rgba(233, 69, 96, 0.1);
-  border: 2px solid #e94560;
-  border-radius: 15px;
+  background: transparent;
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
   margin-bottom: 10px;
+  width: 100%;
 }
 
 .selected-movie-poster {
@@ -403,7 +425,7 @@ const goToProfile = () => router.push('/profile')
   width: 50px;
   height: 50px;
   border: 5px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #e94560;
+  border-top-color: var(--accent-acid);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 20px;
@@ -415,37 +437,46 @@ const goToProfile = () => router.push('/profile')
 
 /* 폼 섹션 */
 .form-section {
-  margin-bottom: 30px;
+  margin-bottom: 50px;
+  width: 100%;
 }
 
 .form-label {
   display: block;
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 12px;
-  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 20px;
+  color: #333;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: left;
 }
 
 .form-input {
   width: 100%;
-  padding: 15px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  color: white;
-  font-size: 16px;
+  padding: 15px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid #333;
+  border-radius: 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-family: var(--font-tech);
   transition: all 0.3s;
+  text-align: left;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #e94560;
-  background: rgba(255, 255, 255, 0.15);
+  border-bottom-color: var(--accent-acid);
+  letter-spacing: 1px;
 }
 
 /* 영화 검색 */
 .movie-search-wrapper {
   position: relative;
+  width: 100%;
 }
 
 .search-dropdown {
@@ -473,7 +504,8 @@ const goToProfile = () => router.push('/profile')
 }
 
 .search-result-item:hover {
-  background: rgba(233, 69, 96, 0.2);
+  background: rgba(204, 255, 0, 0.1);
+  border-left: 2px solid var(--accent-acid);
 }
 
 .search-result-item:last-child {
@@ -513,14 +545,21 @@ const goToProfile = () => router.push('/profile')
 }
 
 .search-hint {
-  margin-top: 10px;
-  padding: 15px;
-  background: rgba(255, 193, 7, 0.1);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 10px;
-  color: #ffc107;
+  margin-top: 20px;
+  padding: 20px;
+  background: transparent;
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  color: var(--accent-acid);
   text-align: center;
-  font-size: 14px;
+  font-size: 1rem;
+  font-family: var(--font-tech);
+  width: 100%;
+  transition: all 0.3s;
+}
+
+.search-hint:hover {
+  background: rgba(204, 255, 0, 0.1);
 }
 
 /* 별점 */
@@ -543,42 +582,46 @@ const goToProfile = () => router.push('/profile')
 }
 
 .star {
-  font-size: 48px;
+  font-size: 2.5rem;
   transition: all 0.2s;
 }
 
 .star-filled {
-  color: #f39c12;
+  color: var(--accent-acid);
 }
 
 .star-empty {
-  color: rgba(255, 255, 255, 0.3);
+  color: #333;
 }
 
 .rating-text {
-  font-size: 18px;
-  color: #f39c12;
+  font-size: 1rem;
+  color: var(--accent-acid);
   font-weight: bold;
+  font-family: var(--font-tech);
 }
 
 /* 텍스트 영역 */
 .form-textarea {
   width: 100%;
-  padding: 15px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  color: white;
-  font-size: 16px;
-  font-family: inherit;
+  padding: 15px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: var(--font-tech);
   resize: vertical;
   transition: all 0.3s;
+  text-align: left;
+  min-height: 200px;
+  line-height: 1.6;
 }
 
 .form-textarea:focus {
   outline: none;
-  border-color: #e94560;
-  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--accent-acid);
+  letter-spacing: 1px;
 }
 
 .char-count {
@@ -606,12 +649,15 @@ const goToProfile = () => router.push('/profile')
 /* 에러 메시지 */
 .error-message {
   padding: 15px;
-  background: rgba(231, 76, 60, 0.2);
-  border: 1px solid #e74c3c;
-  border-radius: 10px;
-  color: #ff6b6b;
+  background: rgba(204, 255, 0, 0.1);
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  color: var(--accent-acid);
   margin-bottom: 20px;
   text-align: center;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* 버튼 */
@@ -634,13 +680,18 @@ const goToProfile = () => router.push('/profile')
 }
 
 .btn-submit {
-  background: linear-gradient(135deg, #e94560 0%, #f39c12 100%);
-  color: white;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-radius: 0;
 }
 
 .btn-submit:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+  background: var(--accent-acid);
+  color: var(--bg-color);
 }
 
 .btn-submit:disabled {
@@ -649,13 +700,18 @@ const goToProfile = () => router.push('/profile')
 }
 
 .btn-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid #333;
+  border-radius: 0;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* 반응형 */

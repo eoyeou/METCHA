@@ -2,22 +2,21 @@
   <div class="home-container">
     <!-- 헤더 -->
     <header class="home-header">
-      <div class="logo" @click="goToHome">MOVIE SITE</div>
-      <div class="header-buttons" v-if="authStore.isAuthenticated">
-        <button @click="goToProfile" class="btn-header">내 프로필</button>
-        <button @click="goToPreference" class="btn-header">리뷰작성</button>
-        <button @click="handleLogout" class="btn-header btn-logout">로그아웃</button>
+      <div class="header-top">
+        <div class="logo" @click="goToHome">FLUX.</div>
+        <div class="header-buttons" v-if="authStore.isAuthenticated">
+          <button @click="goToProfile" class="btn-header">내 프로필</button>
+          <button @click="goToPreference" class="btn-header">리뷰작성</button>
+          <button @click="handleLogout" class="btn-header btn-logout">로그아웃</button>
+        </div>
+        <div class="header-buttons" v-else>
+          <button @click="goToLogin" class="btn-header">로그인</button>
+          <button @click="goToSignup" class="btn-header">회원가입</button>
+        </div>
       </div>
-      <div class="header-buttons" v-else>
-        <button @click="goToLogin" class="btn-header">로그인</button>
-        <button @click="goToSignup" class="btn-header">회원가입</button>
-      </div>
-    </header>
-
-    <!-- 메인 컨텐츠 -->
-    <main class="main-content">
+      
       <!-- 검색창 -->
-      <div class="search-section">
+      <div class="search-section-header">
         <div class="search-box">
           <input
             v-model="searchQuery"
@@ -27,7 +26,12 @@
             placeholder="영화 제목을 검색하세요..."
             class="search-input"
           >
-          <button @click="goToSearchResults" class="search-btn">🔍</button>
+          <button @click="goToSearchResults" class="search-btn">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <path d="m14 14 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
 
         <!-- 검색 결과 (자동완성) -->
@@ -58,7 +62,10 @@
           검색 결과가 없습니다.
         </div>
       </div>
+    </header>
 
+    <!-- 메인 컨텐츠 -->
+    <main class="main-content">
       <!-- 영화 섹션들 (검색 안 할 때) -->
       <div v-if="!searchQuery" class="movies-sections">
         <!-- 큰 포스터 카드 (최신 영화) -->
@@ -606,27 +613,45 @@ onMounted(() => {
 <style scoped>
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
-  color: #fff;
+  background: var(--bg-color);
+  color: var(--text-primary);
 }
 
 .home-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  mix-blend-mode: difference;
+  background: var(--bg-color);
+  border-bottom: 1px solid #222;
+}
+
+.header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 40px;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
+}
+
+.search-section-header {
+  position: relative;
+  max-width: 100%;
+  padding: 15px 40px 20px;
+  border-top: 1px solid #222;
 }
 
 .logo {
-  font-size: 28px;
-  font-weight: bold;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  font-size: 1.8rem;
   cursor: pointer;
-  background: linear-gradient(45deg, #e94560, #f39c12);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  line-height: 0.9;
+  font-stretch: condensed;
 }
 
 .header-buttons {
@@ -636,94 +661,131 @@ onMounted(() => {
 
 .btn-header {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  color: var(--text-primary);
+  border-radius: 0;
+  cursor: none;
   transition: all 0.3s;
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.75rem;
+  line-height: 1.2;
 }
 
 .btn-header:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  border-color: var(--accent-acid);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.4);
 }
 
 .btn-logout {
-  background: rgba(231, 76, 60, 0.3);
-  border-color: rgba(231, 76, 60, 0.5);
+  border-color: var(--accent-acid);
+  color: var(--accent-acid);
 }
 
 .btn-logout:hover {
-  background: rgba(231, 76, 60, 0.5);
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  border-color: var(--accent-acid);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.4);
 }
 
 .main-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 60px 40px;
-}
-
-/* 검색 섹션 */
-.search-section {
-  position: relative;
-  max-width: 800px;
-  margin: 0 auto 60px;
+  max-width: 100%;
+  margin: 0;
+  padding: 40px 40px 60px;
+  margin-top: 150px; /* 헤더 높이만큼 여백 */
 }
 
 .search-box {
   display: flex;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  align-items: center;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+  border: none;
+  border-bottom: 2px solid #333;
   transition: all 0.3s;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .search-box:focus-within {
-  border-color: #e94560;
-  box-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+  border-bottom-color: var(--accent-acid);
 }
 
 .search-input {
   flex: 1;
-  padding: 20px 30px;
+  padding: 15px 0;
   background: transparent;
   border: none;
-  color: white;
-  font-size: 18px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-weight: 300;
+  letter-spacing: 0.05em;
   outline: none;
+  text-align: left;
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: #333;
+  -webkit-text-stroke: 1px #333;
+  color: transparent;
 }
 
 .search-btn {
-  padding: 20px 30px;
+  padding: 15px 0 15px 20px;
   background: transparent;
   border: none;
-  font-size: 24px;
-  cursor: pointer;
-  transition: transform 0.3s;
+  cursor: none;
+  color: var(--text-primary);
+  transition: all 0.3s;
+  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: all 0.3s;
+}
+
+.search-box:focus-within .search-btn {
+  opacity: 1;
+  color: var(--accent-acid);
 }
 
 .search-btn:hover {
+  opacity: 1;
+  color: var(--accent-acid);
+}
+
+.search-btn:hover svg {
   transform: scale(1.1);
 }
 
 /* 검색 결과 (자동완성) */
 .search-results {
   position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 800px;
   margin-top: 10px;
-  background: rgba(30, 30, 46, 0.98);
-  border-radius: 20px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  z-index: 1000;
   max-height: 400px;
   overflow-y: auto;
 }
@@ -742,7 +804,7 @@ onMounted(() => {
 }
 
 .search-result-item:hover {
-  background: rgba(233, 69, 96, 0.2);
+  background: rgba(204, 255, 0, 0.1);
   transform: translateX(5px);
 }
 
@@ -796,9 +858,15 @@ onMounted(() => {
 }
 
 .movie-slider-section h2 {
-  font-size: 32px;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
   margin-bottom: 30px;
-  font-weight: bold;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+  line-height: 0.75;
+  font-stretch: condensed;
 }
 
 /* 큰 포스터 카드 섹션 */
@@ -807,9 +875,14 @@ onMounted(() => {
 }
 
 .featured-section h2 {
-  font-size: 32px;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
   margin-bottom: 30px;
-  font-weight: bold;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  line-height: 0.75;
+  font-stretch: condensed;
 }
 
 .featured-movies {
@@ -822,20 +895,22 @@ onMounted(() => {
 .featured-card {
   position: relative;
   height: 500px;
-  border-radius: 20px;
+  border-radius: 0;
   overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s;
+  cursor: none;
+  transition: all 0.5s;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #333;
+  filter: grayscale(50%) contrast(110%);
 }
 
 .featured-card:hover {
-  transform: translateY(-10px) scale(1.02);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border-color: rgba(233, 69, 96, 0.5);
+  transform: scale(1.05) skewX(-2deg);
+  border-color: var(--accent-acid);
+  filter: grayscale(0%) contrast(120%);
+  box-shadow: 0 0 30px rgba(204, 255, 0, 0.4);
 }
 
 .featured-card:hover .featured-overlay {
@@ -863,16 +938,24 @@ onMounted(() => {
 }
 
 .featured-content h3 {
-  font-size: 36px;
+  font-family: var(--font-display);
+  font-size: 3rem;
   margin-bottom: 20px;
-  font-weight: bold;
+  font-weight: 700;
   color: white;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  line-height: 0.75;
+  font-stretch: condensed;
+  mix-blend-mode: difference;
 }
 
 .featured-description {
-  font-size: 16px;
-  line-height: 1.8;
+  font-size: 15px;
+  font-family: var(--font-kr);
+  font-weight: 300;
+  line-height: 1.9;
+  letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.95);
   margin-bottom: 25px;
   display: -webkit-box;
@@ -896,27 +979,49 @@ onMounted(() => {
 }
 
 .featured-rating {
-  color: #f39c12;
+  color: var(--accent-acid);
   font-weight: bold;
   text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
 }
 
 .btn-more-info {
   padding: 12px 30px;
-  background: linear-gradient(135deg, #e94560, #f39c12);
-  border: none;
-  border-radius: 25px;
-  color: white;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  color: var(--accent-acid);
+  font-size: 1rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: none;
   transition: all 0.3s;
   align-self: flex-start;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-more-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--accent-acid);
+  transition: left 0.3s;
+  z-index: -1;
 }
 
 .btn-more-info:hover {
+  color: var(--bg-color);
   transform: scale(1.05);
-  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.5);
+}
+
+.btn-more-info:hover::before {
+  left: 0;
 }
 
 .movie-slider-container {
@@ -947,19 +1052,22 @@ onMounted(() => {
 }
 
 .movie-card {
-  cursor: pointer;
-  transition: all 0.3s;
-  border-radius: 15px;
+  cursor: none;
+  transition: all 0.5s;
+  border-radius: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  flex: 0 0 200px; /* 고정 너비, 축소/확대 불가 */
+  background: transparent;
+  flex: 0 0 200px;
   min-width: 200px;
   max-width: 200px;
+  border: 1px solid #333;
+  position: relative;
 }
 
 .movie-card:hover {
-  transform: translateY(-10px) scale(1.05);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+  transform: scale(1.05) skewX(-2deg);
+  border-color: var(--accent-acid);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.3);
 }
 
 .movie-poster {
@@ -967,6 +1075,13 @@ onMounted(() => {
   aspect-ratio: 2/3;
   object-fit: cover;
   display: block;
+  filter: grayscale(30%) contrast(110%);
+  transition: 0.5s;
+}
+
+.movie-card:hover .movie-poster {
+  filter: grayscale(0%) contrast(120%);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
 }
 
 .movie-info {
@@ -974,7 +1089,10 @@ onMounted(() => {
 }
 
 .movie-info h3 {
-  font-size: 16px;
+  font-size: 14px;
+  font-family: var(--font-kr);
+  font-weight: 500;
+  letter-spacing: -0.01em;
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -982,14 +1100,17 @@ onMounted(() => {
 }
 
 .movie-year {
-  font-size: 14px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 300;
+  letter-spacing: 0.05em;
   color: #aaa;
   margin-bottom: 5px;
 }
 
 .movie-rating {
   font-size: 14px;
-  color: #f39c12;
+  color: var(--accent-acid);
 }
 
 .empty-state {
@@ -1023,8 +1144,9 @@ onMounted(() => {
 }
 
 .slider-btn:hover:not(:disabled) {
-  background: rgba(233, 69, 96, 0.8);
-  border-color: #e94560;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #555;
+  color: var(--text-primary);
   transform: scale(1.1);
 }
 

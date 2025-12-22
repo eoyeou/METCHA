@@ -26,12 +26,16 @@
       <!-- 메인 컨텐츠 -->
       <div class="movie-content">
         <!-- 왼쪽: 포스터 -->
-        <div class="movie-poster">
-          <img 
-            :src="movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'" 
-            :alt="movie.title"
-            @error="handleImageError"
-          >
+        <div class="movie-poster-container">
+          <div class="movie-poster-wrapper">
+            <img 
+              :src="movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'" 
+              :alt="movie.title"
+              class="movie-poster-img"
+            />
+            <div class="visual-overlay"></div>
+          </div>
+          <h1 class="rotated-title">{{ movie.title.toUpperCase().replace(/\s/g, '_') }}</h1>
         </div>
 
         <!-- 중앙: 영화 정보 -->
@@ -808,8 +812,8 @@ const toggleFollow = async (userId, user) => {
 
 .movie-detail-container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
-  color: #fff;
+  background: var(--bg-color);
+  color: var(--text-primary);
 }
 
 .loading, .error {
@@ -825,7 +829,7 @@ const toggleFollow = async (userId, user) => {
   width: 50px;
   height: 50px;
   border: 5px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #e94560;
+  border-top-color: #666;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -836,31 +840,35 @@ const toggleFollow = async (userId, user) => {
 
 .btn-retry {
   padding: 10px 30px;
-  background: #e94560;
-  color: white;
+  background: var(--accent-acid);
+  color: var(--bg-color);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
+  font-weight: 500;
 }
 
 .movie-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 40px;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
+  z-index: 100;
+  mix-blend-mode: difference;
 }
 
 .logo {
-  font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  background: linear-gradient(45deg, #e94560, #f39c12);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-size: 1.5rem;
+  cursor: none;
+  color: var(--text-primary);
 }
 
 .header-buttons {
@@ -870,53 +878,165 @@ const toggleFollow = async (userId, user) => {
 
 .btn-header {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  color: var(--text-primary);
+  border-radius: 0;
+  cursor: none;
   transition: all 0.3s;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
 }
 
 .btn-header:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  border-color: #555;
 }
 
 .movie-content {
   display: grid;
-  grid-template-columns: 300px 1fr 250px;
-  gap: 40px;
-  padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
+  grid-template-columns: 1fr 2fr;
+  gap: 0;
+  padding: 0;
+  min-height: 100vh;
+  border-bottom: 1px solid #222;
+  position: relative;
 }
 
-.movie-poster img {
+.review-action {
+  grid-column: 2;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  justify-content: center;
+}
+
+.movie-poster-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 60px 40px;
+  background: #000;
+}
+
+.movie-poster-wrapper {
+  position: relative;
   width: 100%;
-  border-radius: 15px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  transition: transform 0.3s;
+  max-width: 500px;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  border: 1px solid #222;
 }
 
-.movie-poster img:hover {
-  transform: scale(1.05);
+.movie-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(30%) contrast(110%);
+  transition: all 0.5s;
+}
+
+.movie-poster-container:hover .movie-poster-img {
+  filter: grayscale(0%) contrast(120%);
+  transform: scale(1.02);
+}
+
+.visual-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    180deg, 
+    rgba(0, 0, 0, 0) 0%, 
+    rgba(0, 0, 0, 0.3) 50%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+.movie-poster-container:hover .visual-overlay {
+  opacity: 0.5;
+}
+
+.rotated-title {
+  position: absolute;
+  bottom: 60px;
+  left: -120px;
+  font-size: 7rem;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.15);
+  opacity: 0.3;
+  transform: rotate(-90deg);
+  transform-origin: left bottom;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  font-stretch: condensed;
+  z-index: 2;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .movie-info {
-  padding: 20px 0;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-left: 1px solid #222;
+  position: relative;
+  background: var(--bg-color);
+}
+
+.movie-info::before {
+  content: 'NOW_PLAYING';
+  position: absolute;
+  padding: 10px 20px;
+  border: 1px solid var(--accent-acid);
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.3);
+  transform: rotate(-90deg);
+  left: -30px;
+  top: 100px;
+  white-space: nowrap;
+  z-index: 3;
 }
 
 .movie-title {
-  font-size: 42px;
-  margin-bottom: 10px;
-  font-weight: bold;
+  font-family: var(--font-display);
+  font-size: 4.5rem;
+  line-height: 0.75;
+  margin-bottom: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  font-stretch: condensed;
+}
+
+.movie-title span {
+  color: var(--accent-acid);
 }
 
 .original-title {
-  color: #aaa;
-  font-size: 18px;
+  color: #888;
+  font-size: 0.9rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
   margin-bottom: 20px;
+  font-family: var(--font-mono);
 }
 
 .rating-info {
@@ -928,7 +1048,7 @@ const toggleFollow = async (userId, user) => {
 }
 
 .stars {
-  color: #f39c12;
+  color: var(--accent-acid);
   font-size: 24px;
 }
 
@@ -942,10 +1062,15 @@ const toggleFollow = async (userId, user) => {
 }
 
 .movie-meta {
+  font-family: 'Courier New', monospace;
+  color: #888;
+  margin-bottom: 40px;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+  padding: 20px 0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
-  margin-bottom: 30px;
 }
 
 .meta-item {
@@ -955,12 +1080,14 @@ const toggleFollow = async (userId, user) => {
 }
 
 .meta-label {
-  color: #aaa;
-  font-size: 14px;
+  color: #888;
+  font-size: 0.9rem;
+  text-transform: uppercase;
 }
 
 .meta-value {
-  font-size: 16px;
+  font-size: 1rem;
+  color: var(--text-primary);
 }
 
 .genre-tags {
@@ -972,10 +1099,37 @@ const toggleFollow = async (userId, user) => {
 
 .genre-tag {
   padding: 8px 16px;
-  background: rgba(233, 69, 96, 0.2);
-  border: 1px solid #e94560;
-  border-radius: 20px;
-  font-size: 14px;
+  background: transparent;
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  font-size: 0.8rem;
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.genre-tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(204, 255, 0, 0.1);
+  transition: left 0.3s;
+  z-index: -1;
+}
+
+.genre-tag:hover {
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.genre-tag:hover::before {
+  left: 0;
 }
 
 .movie-description {
@@ -983,14 +1137,17 @@ const toggleFollow = async (userId, user) => {
 }
 
 .movie-description h3 {
-  font-size: 24px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
   margin-bottom: 15px;
+  text-transform: uppercase;
 }
 
 .movie-description p {
   line-height: 1.8;
-  color: #ddd;
-  font-size: 16px;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-family: var(--font-tech);
 }
 
 .btn-watchlist {
@@ -1018,8 +1175,9 @@ const toggleFollow = async (userId, user) => {
 }
 
 .btn-watchlist.active {
-  background: rgba(233, 69, 96, 0.3);
-  border-color: #e94560;
+  background: rgba(204, 255, 0, 0.2);
+  border-color: #555;
+  color: var(--accent-acid);
 }
 
 .btn-watchlist:disabled {
@@ -1034,20 +1192,23 @@ const toggleFollow = async (userId, user) => {
 .btn-write-review {
   width: 100%;
   padding: 20px;
-  background: linear-gradient(135deg, #e94560 0%, #f39c12 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  cursor: none;
+  font-size: 1rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
   transition: all 0.3s;
-  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
 }
 
 .btn-write-review:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(233, 69, 96, 0.6);
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  transform: translateY(-2px);
 }
 
 .btn-write-review.active {
@@ -1123,7 +1284,7 @@ const toggleFollow = async (userId, user) => {
 
 .form-group textarea:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: #555;
 }
 
 .char-count {
@@ -1163,13 +1324,18 @@ const toggleFollow = async (userId, user) => {
 }
 
 .btn-submit {
-  background: #e94560;
-  color: white;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
   flex: 1;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn-submit:hover {
-  background: #d63851;
+  background: var(--accent-acid);
+  color: var(--bg-color);
   transform: translateY(-2px);
 }
 
@@ -1287,8 +1453,9 @@ const toggleFollow = async (userId, user) => {
 }
 
 .similar-movies-container .slider-btn:hover:not(:disabled) {
-  background: rgba(233, 69, 96, 0.8);
-  border-color: #e94560;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #555;
+  color: var(--text-primary);
   transform: scale(1.05);
 }
 
@@ -1322,19 +1489,18 @@ const toggleFollow = async (userId, user) => {
 }
 
 .review-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  padding: 30px;
+  background: #111;
+  padding: 20px;
   margin-bottom: 20px;
-  border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  border-left: 3px solid var(--accent-acid);
   transition: all 0.3s;
+  box-shadow: -3px 0 10px rgba(204, 255, 0, 0.2);
 }
 
 .review-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  background: #1a1a1a;
+  border-left-color: var(--accent-acid);
 }
 
 .review-header {
@@ -1366,14 +1532,14 @@ const toggleFollow = async (userId, user) => {
 }
 
 .review-user.clickable:hover .username {
-  color: #e94560;
+  color: var(--accent-acid);
 }
 
 .user-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: 2px solid #e94560;
+  border: 2px solid #555;
 }
 
 .user-info {
@@ -1401,7 +1567,7 @@ const toggleFollow = async (userId, user) => {
 }
 
 .review-rating .stars {
-  color: #f39c12;
+  color: var(--accent-acid);
 }
 
 .review-content {
@@ -1452,25 +1618,29 @@ const toggleFollow = async (userId, user) => {
 }
 
 .btn-follow-review.following:hover {
-  background: #e74c3c;
-  border-color: #e74c3c;
-  color: white;
+  background: var(--accent-acid);
+  border-color: #555;
+  color: var(--bg-color);
 }
 
 .btn-spoiler {
   margin-top: 15px;
   padding: 8px 16px;
-  background: rgba(255, 193, 7, 0.2);
-  border: 1px solid #ffc107;
-  color: #ffc107;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
+  background: transparent;
+  border: 1px solid #555;
+  color: var(--text-primary);
+  border-radius: 0;
+  cursor: none;
+  font-size: 0.8rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
   transition: all 0.3s;
 }
 
 .btn-spoiler:hover {
-  background: rgba(255, 193, 7, 0.3);
+  background: var(--accent-acid);
+  color: var(--bg-color);
 }
 
 .review-actions {
@@ -1494,22 +1664,26 @@ const toggleFollow = async (userId, user) => {
 }
 
 .btn-like:hover {
-  background: rgba(52, 152, 219, 0.3);
-  border-color: #3498db;
+  background: rgba(204, 255, 0, 0.2);
+  border-color: #555;
+  color: var(--accent-acid);
 }
 
 .btn-edit:hover {
-  background: rgba(243, 156, 18, 0.3);
-  border-color: #f39c12;
+  background: rgba(204, 255, 0, 0.2);
+  border-color: #555;
+  color: var(--accent-acid);
 }
 
 .btn-delete {
-  color: #e74c3c;
-  border-color: #e74c3c;
+  color: #666;
+  border-color: #666;
 }
 
 .btn-delete:hover {
-  background: rgba(231, 76, 60, 0.3);
+  background: rgba(102, 102, 102, 0.3);
+  border-color: #555;
+  color: var(--accent-acid);
 }
 
 .slide-down-enter-active, .slide-down-leave-active {

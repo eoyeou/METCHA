@@ -32,85 +32,75 @@
     </div>
 
     <div class="profile-content">
-      <div class="profile-info">
-        <div class="profile-image-container">
-          <div class="profile-image-placeholder">
+      <!-- 프로필 ID 배지 -->
+      <div class="profile-id-section">
+        <div class="id-badge hover-trigger">{{ (userProfile?.username || 'USER_01').toUpperCase() }}</div>
+        <div class="level-text">LEVEL {{ Math.min(userProfile?.review_count || 0, 10) }} OBSERVER</div>
+        
+        <!-- 프로필 이미지 (작게) -->
+        <div v-if="isOwnProfile" class="profile-image-mini">
+          <div class="profile-image-placeholder-mini">
             <img 
               v-if="previewImage || userProfile?.profile_image" 
               :src="previewImage || userProfile?.profile_image" 
               alt="Profile"
-              class="profile-image"
+              class="profile-image-mini-img"
             />
-            <div v-else class="profile-image-placeholder-text">User Profile Image</div>
           </div>
-          <!-- 본인 프로필일 때만 이미지 업로드 버튼 표시 -->
-          <div v-if="isOwnProfile" class="profile-image-upload">
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*"
-              @change="handleImageSelect"
-              style="display: none"
-            />
-            <button 
-              @click="triggerFileInput"
-              class="btn-upload-image"
-              :disabled="isUploading"
-            >
-              {{ isUploading ? '업로드 중...' : (userProfile?.profile_image ? '프로필 사진 변경' : '프로필 사진 등록') }}
-            </button>
-            <button 
-              v-if="previewImage"
-              @click="uploadImage"
-              class="btn-save-image"
-              :disabled="isUploading"
-            >
-              저장
-            </button>
-            <button 
-              v-if="previewImage"
-              @click="cancelImageUpload"
-              class="btn-cancel-image"
-              :disabled="isUploading"
-            >
-              취소
-            </button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*"
+            @change="handleImageSelect"
+            style="display: none"
+          />
+          <button 
+            @click="triggerFileInput"
+            class="btn-upload-mini"
+            :disabled="isUploading"
+          >
+            {{ isUploading ? 'UPLOADING...' : 'UPLOAD_IMAGE' }}
+          </button>
+          <div v-if="previewImage" class="upload-actions-mini">
+            <button @click="uploadImage" class="btn-save-mini" :disabled="isUploading">SAVE</button>
+            <button @click="cancelImageUpload" class="btn-cancel-mini" :disabled="isUploading">CANCEL</button>
           </div>
         </div>
         
-        <div class="profile-stats">
-          <div class="stat-item">
-            <div class="stat-label">리뷰 수</div>
-            <div class="stat-value">{{ userProfile?.review_count || 0 }}</div>
-          </div>
-          <div class="stat-item clickable" @click="showFollowersModalHandler">
-            <div class="stat-label">팔로워</div>
-            <div class="stat-value">{{ userProfile?.followers_count || 0 }}</div>
-          </div>
-          <div class="stat-item clickable" @click="showFollowingModalHandler">
-            <div class="stat-label">팔로잉</div>
-            <div class="stat-value">{{ userProfile?.following_count || 0 }}</div>
-          </div>
-        </div>
-        
-        <!-- 팔로우 버튼 (본인이 아닐 때만 표시) -->
-        <div v-if="!userProfile?.is_self && userProfile?.id !== authStore.user?.id" class="follow-button-container">
+        <!-- 팔로우 버튼 (본인이 아닐 때만) -->
+        <div v-if="!userProfile?.is_self && userProfile?.id !== authStore.user?.id" class="follow-button-profile">
           <button 
             v-if="!userProfile?.is_following"
             @click="handleFollow"
-            class="btn-follow"
+            class="btn-follow-profile"
             :disabled="isFollowing"
           >
-            {{ isFollowing ? '처리 중...' : '팔로우' }}
+            {{ isFollowing ? 'PROCESSING...' : 'FOLLOW' }}
           </button>
           <button 
             v-else
             @click="handleUnfollow"
-            class="btn-unfollow"
+            class="btn-unfollow-profile"
             :disabled="isFollowing"
           >
-            {{ isFollowing ? '처리 중...' : '언팔로우' }}
+            {{ isFollowing ? 'PROCESSING...' : 'UNFOLLOW' }}
           </button>
+        </div>
+      </div>
+
+      <!-- 통계 -->
+      <div class="profile-stats-modern">
+        <div class="stat-item-modern clickable" @click="showFollowersModalHandler">
+          <div class="stat-label-modern">FOLLOWERS</div>
+          <div class="stat-value-modern">{{ userProfile?.followers_count || 0 }}</div>
+        </div>
+        <div class="stat-item-modern clickable" @click="showFollowingModalHandler">
+          <div class="stat-label-modern">FOLLOWING</div>
+          <div class="stat-value-modern">{{ userProfile?.following_count || 0 }}</div>
+        </div>
+        <div class="stat-item-modern">
+          <div class="stat-label-modern">REVIEWS</div>
+          <div class="stat-value-modern">{{ userProfile?.review_count || 0 }}</div>
         </div>
       </div>
 
@@ -120,21 +110,21 @@
           :class="{ active: activeTab === 'reviews' }"
           @click="activeTab = 'reviews'"
         >
-          내 Review
+          REVIEWS
         </button>
         <button 
           class="tab-btn" 
-          :class="{ active: activeTab === 'watchlist' }"
-          @click="activeTab = 'watchlist'"
+          :class="{ active: activeTab === 'wishlist' }"
+          @click="activeTab = 'wishlist'"
         >
-          위시리스트
+          WISHLIST
         </button>
         <button 
           class="tab-btn" 
           :class="{ active: activeTab === 'report' }"
           @click="activeTab = 'report'"
         >
-          내 취향 Report
+          REPORT
         </button>
       </div>
 
@@ -172,14 +162,14 @@
           </div>
         </div>
 
-        <!-- 위시리스트 탭 -->
-        <div v-if="activeTab === 'watchlist'" class="watchlist-section">
-          <div v-if="watchlist.length === 0" class="empty-state">
+        <!-- 위시리스트 탭 (보고싶은 영화) -->
+        <div v-if="activeTab === 'wishlist'" class="watchlist-section">
+          <div v-if="wishlistItems.length === 0" class="empty-state">
             위시리스트에 추가한 영화가 없습니다.
           </div>
           <div v-else class="watchlist-grid">
             <div 
-              v-for="item in watchlist" 
+              v-for="item in wishlistItems" 
               :key="item.id"
               class="watchlist-card"
               @click="goToMovie(item.movie.id)"
@@ -211,8 +201,18 @@
           </div>
         </div>
 
+
         <!-- 내 취향 Report 탭 -->
         <div v-if="activeTab === 'report'" class="report-section">
+          <!-- 히트맵 그리드 -->
+          <div class="profile-heatmap-wrapper">
+            <div class="heatmap-grid" ref="heatmapRef"></div>
+          </div>
+          
+          <div class="analysis-text">
+            ANALYSIS COMPLETE.<br>
+            DOMINANT TRAIT: <span class="trait-highlight">VISUAL_SEEKER</span>
+          </div>
           <div v-if="!preferenceReport" class="report-empty">
             <p>취향 리포트가 없습니다.</p>
             <button class="btn-generate" @click="generateReport">리포트 생성하기</button>
@@ -361,7 +361,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
@@ -399,6 +399,7 @@ const fileInput = ref(null)
 const previewImage = ref(null)
 const selectedFile = ref(null)
 const isUploading = ref(false)
+const heatmapRef = ref(null)
 
 // 본인 프로필인지 확인하는 computed
 const isOwnProfile = computed(() => {
@@ -406,6 +407,11 @@ const isOwnProfile = computed(() => {
     return false
   }
   return userProfile.value.is_self || userProfile.value.id === authStore.user.id
+})
+
+// 위시리스트 (보고싶은 영화 - want 상태)
+const wishlistItems = computed(() => {
+  return watchlist.value.filter(item => item.status === 'want')
 })
 
 // 프로필 정보 가져오기
@@ -1022,6 +1028,18 @@ onMounted(async () => {
   await fetchReviews()
   await fetchWatchlist()
   await fetchPreferenceReport()
+  
+  // 히트맵 그리드 생성
+  await nextTick()
+  if (heatmapRef.value) {
+    for (let i = 0; i < 100; i++) {
+      const div = document.createElement('div')
+      const randomClass = `c-${Math.floor(Math.random() * 3) + 1}`
+      const activeClass = Math.random() > 0.7 ? 'c-active' : ''
+      div.className = `heatmap-cell ${randomClass} ${activeClass}`
+      heatmapRef.value.appendChild(div)
+    }
+  }
 })
 
 // 프로필 이미지 업로드 관련 함수들
@@ -1115,15 +1133,24 @@ const cancelImageUpload = () => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
 }
 
 .profile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid #ddd;
-  margin-bottom: 30px;
+  padding: 20px 40px;
+  z-index: 100;
+  mix-blend-mode: difference;
+  border-bottom: 1px solid #222;
+  margin-bottom: 0;
 }
 
 .header-left {
@@ -1133,21 +1160,42 @@ const cancelImageUpload = () => {
 }
 
 .logo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: #666;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-size: 1.5rem;
+  cursor: none;
+  color: var(--text-primary);
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
 }
 
-.username {
-  margin: 0;
-  font-size: 28px;
-  font-weight: bold;
+.id-badge {
+  font-family: var(--font-display);
+  font-size: 5rem;
+  text-align: center;
+  -webkit-text-stroke: 1px #333;
+  color: transparent;
+  position: relative;
+  z-index: 2;
+  transition: 0.3s;
+  font-weight: 700;
+  line-height: 0.9;
+}
+
+.id-badge:hover {
+  color: var(--text-primary);
+}
+
+.level-text {
+  font-family: monospace;
+  color: #666;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .header-right {
@@ -1157,225 +1205,232 @@ const cancelImageUpload = () => {
 
 .btn-nav {
   padding: 10px 20px;
-  border-radius: 20px;
-  border: 1px solid #ddd;
-  background: white;
-  cursor: pointer;
-  font-size: 14px;
+  border-radius: 0;
+  border: 1px solid var(--text-primary);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: none;
+  font-size: 0.9rem;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
   transition: all 0.3s;
 }
 
 .btn-nav:hover {
-  background: #f5f5f5;
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  border-color: var(--accent-acid);
 }
 
 .btn-logout {
-  background: #e74c3c;
-  color: white;
-  border-color: #e74c3c;
+  border-color: var(--accent-acid);
+  color: var(--accent-acid);
 }
 
 .btn-logout:hover {
-  background: #c0392b;
+  background: var(--accent-acid);
+  color: var(--bg-color);
 }
 
 .profile-content {
-  margin-top: 30px;
-}
-
-.profile-info {
-  display: flex;
-  gap: 30px;
-  margin-bottom: 30px;
-}
-
-.profile-image-container {
+  margin-top: 100px;
+  padding: 60px 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
-  flex-shrink: 0;
+  justify-content: center;
+  min-height: calc(100vh - 100px);
 }
 
-.profile-image-placeholder {
-  width: 150px;
-  height: 150px;
-  background: #e0e0e0;
-  border-radius: 50%;
+.profile-id-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 50px;
+}
+
+.profile-image-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.profile-image-placeholder-mini {
+  width: 80px;
+  height: 80px;
+  background: #111;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 3px solid #ddd;
+  border: 1px solid #333;
   position: relative;
 }
 
-.profile-image {
+.profile-image-mini-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 50%;
 }
 
-.profile-image-placeholder-text {
-  color: #999;
-  font-size: 12px;
-  text-align: center;
-  padding: 10px;
-}
-
-.profile-image-upload {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-}
-
-.btn-upload-image,
-.btn-save-image,
-.btn-cancel-image {
+.btn-upload-mini,
+.btn-save-mini,
+.btn-cancel-mini {
   padding: 8px 16px;
-  border-radius: 20px;
-  border: 1px solid #ddd;
-  background: white;
-  cursor: pointer;
-  font-size: 12px;
+  border-radius: 0;
+  border: 1px solid var(--accent-acid);
+  background: transparent;
+  color: var(--accent-acid);
+  cursor: none;
+  font-size: 0.7rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
   transition: all 0.3s;
   white-space: nowrap;
 }
 
-.btn-upload-image:hover:not(:disabled) {
-  background: #4a90e2;
-  color: white;
-  border-color: #4a90e2;
+.btn-upload-mini:hover:not(:disabled),
+.btn-save-mini:hover:not(:disabled) {
+  background: var(--accent-acid);
+  color: var(--bg-color);
 }
 
-.btn-save-image {
-  background: #27ae60;
-  color: white;
-  border-color: #27ae60;
+.btn-cancel-mini {
+  border-color: #666;
+  color: #666;
 }
 
-.btn-save-image:hover:not(:disabled) {
-  background: #229954;
+.btn-cancel-mini:hover:not(:disabled) {
+  background: #666;
+  color: var(--text-primary);
 }
 
-.btn-cancel-image {
-  background: #e74c3c;
-  color: white;
-  border-color: #e74c3c;
+.upload-actions-mini {
+  display: flex;
+  gap: 10px;
 }
 
-.btn-cancel-image:hover:not(:disabled) {
-  background: #c0392b;
+.follow-button-profile {
+  margin-top: 20px;
 }
 
-.btn-upload-image:disabled,
-.btn-save-image:disabled,
-.btn-cancel-image:disabled {
+.btn-follow-profile,
+.btn-unfollow-profile {
+  padding: 12px 24px;
+  border-radius: 0;
+  border: 1px solid var(--accent-acid);
+  background: transparent;
+  color: var(--accent-acid);
+  font-size: 0.9rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: none;
+  transition: all 0.3s;
+}
+
+.btn-follow-profile:hover:not(:disabled),
+.btn-unfollow-profile:hover:not(:disabled) {
+  background: var(--accent-acid);
+  color: var(--bg-color);
+}
+
+.btn-follow-profile:disabled,
+.btn-unfollow-profile:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.profile-stats {
+.profile-stats-modern {
   display: flex;
-  gap: 40px;
+  gap: 60px;
   align-items: center;
+  margin-bottom: 50px;
+  padding: 30px 0;
+  border-top: 1px solid #222;
+  border-bottom: 1px solid #222;
 }
 
-.stat-item {
+.stat-item-modern {
   text-align: center;
+  transition: all 0.3s;
 }
 
-.stat-label {
-  font-size: 14px;
+.stat-item-modern.clickable {
+  cursor: none;
+}
+
+.stat-item-modern.clickable:hover {
+  transform: translateY(-5px);
+}
+
+.stat-item-modern.clickable:hover .stat-value-modern {
+  color: var(--accent-acid);
+}
+
+.stat-label-modern {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
   color: #666;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-}
-
-.stat-item.clickable {
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.stat-item.clickable:hover {
-  transform: translateY(-2px);
-  color: #4a90e2;
-}
-
-.follow-button-container {
-  margin-top: 20px;
-}
-
-.btn-follow,
-.btn-unfollow {
-  padding: 12px 24px;
-  border-radius: 8px;
-  border: none;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-follow {
-  background: #4a90e2;
-  color: white;
-}
-
-.btn-follow:hover:not(:disabled) {
-  background: #357abd;
-}
-
-.btn-unfollow {
-  background: #95a5a6;
-  color: white;
-}
-
-.btn-unfollow:hover:not(:disabled) {
-  background: #7f8c8d;
-}
-
-.btn-follow:disabled,
-.btn-unfollow:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.stat-value-modern {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: color 0.3s;
 }
 
 .content-tabs {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 0;
+  margin-bottom: 40px;
+  border-bottom: 1px solid #222;
 }
 
 .tab-btn {
-  padding: 12px 24px;
-  border-radius: 20px;
-  border: 2px solid #333;
-  background: #f0f0f0;
-  cursor: pointer;
-  font-size: 14px;
+  padding: 15px 30px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #666;
+  cursor: none;
+  font-size: 0.9rem;
+  font-family: var(--font-display);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
   transition: all 0.3s;
 }
 
+.tab-btn:hover {
+  color: var(--text-primary);
+  border-bottom-color: #333;
+}
+
 .tab-btn.active {
-  background: #4a90e2;
-  color: white;
-  border-color: #4a90e2;
+  color: var(--accent-acid);
+  border-bottom-color: var(--accent-acid);
 }
 
 .content-area {
   min-height: 400px;
-  background: #f9f9f9;
-  border-radius: 8px;
-  padding: 30px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 1000px;
 }
 
 /* Watchlist Section */
@@ -1390,17 +1445,18 @@ const cancelImageUpload = () => {
 }
 
 .watchlist-card {
-  background: white;
-  border-radius: 8px;
+  background: transparent;
+  border-radius: 0;
   overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: none;
+  transition: all 0.5s;
   position: relative;
+  border: 1px solid #333;
 }
 
 .watchlist-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  transform: scale(1.05) skewX(-2deg);
+  border-color: var(--accent-acid);
 }
 
 .watchlist-poster {
@@ -1430,21 +1486,23 @@ const cancelImageUpload = () => {
 }
 
 .btn-remove-watchlist {
-  background: rgba(231, 76, 60, 0.9);
-  border: none;
-  border-radius: 50%;
+  background: rgba(204, 255, 0, 0.2);
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
   width: 32px;
   height: 32px;
-  cursor: pointer;
+  cursor: none;
   font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s;
+  color: var(--accent-acid);
 }
 
 .btn-remove-watchlist:hover {
-  background: rgba(231, 76, 60, 1);
+  background: var(--accent-acid);
+  color: var(--bg-color);
   transform: scale(1.1);
 }
 
@@ -1469,7 +1527,7 @@ const cancelImageUpload = () => {
 
 .watchlist-rating {
   font-size: 14px;
-  color: #f39c12;
+  color: var(--accent-acid);
   font-weight: bold;
 }
 
@@ -1493,16 +1551,19 @@ const cancelImageUpload = () => {
 .review-card {
   display: flex;
   gap: 20px;
-  background: white;
+  background: #111;
   padding: 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: 0;
+  border-left: 3px solid var(--accent-acid);
+  cursor: none;
+  transition: all 0.3s;
+  margin-bottom: 20px;
 }
 
 .review-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: #1a1a1a;
+  border-left-color: var(--accent-acid);
+  transform: translateX(5px);
 }
 
 .review-movie-poster {
@@ -1543,7 +1604,7 @@ const cancelImageUpload = () => {
 .review-rating {
   font-size: 16px;
   margin-bottom: 10px;
-  color: #f39c12;
+  color: var(--accent-acid);
 }
 
 .review-text {
@@ -1562,11 +1623,14 @@ const cancelImageUpload = () => {
 }
 
 .spoiler-badge {
-  background: #e74c3c;
-  color: white;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 11px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
 }
 
 /* Report Section */
@@ -1747,6 +1811,52 @@ const cancelImageUpload = () => {
   font-size: 12px;
   margin-top: 10px;
   color: #bbb;
+}
+
+/* 히트맵 그리드 */
+.profile-heatmap-wrapper {
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 5px;
+  opacity: 0.8;
+  max-width: 400px;
+}
+
+.heatmap-cell {
+  width: 30px;
+  height: 30px;
+  background: #111;
+  transition: 0.2s;
+  cursor: none;
+}
+
+.heatmap-cell:hover {
+  background: var(--accent-acid);
+  transform: scale(1.5);
+  box-shadow: 0 0 10px var(--accent-acid);
+}
+
+.heatmap-cell.c-1 {
+  background: #222;
+}
+
+.heatmap-cell.c-2 {
+  background: #333;
+}
+
+.heatmap-cell.c-3 {
+  background: #444;
+}
+
+.heatmap-cell.c-active {
+  background: var(--accent-acid);
+  opacity: 0.5;
 }
 
 /* 모달 스타일 */
