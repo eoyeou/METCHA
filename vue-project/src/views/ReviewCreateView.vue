@@ -205,7 +205,9 @@ const handleSearch = () => {
   searchTimeout = setTimeout(async () => {
     try {
       const response = await axios.get(`${API_URL}/movies/`)
-      searchResults.value = response.data
+      // REST Framework pagination이 활성화되어 있으면 results를 사용
+      const movies = response.data.results || response.data
+      searchResults.value = movies
         .filter(m => 
           m.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
           m.original_title?.toLowerCase().includes(searchQuery.value.toLowerCase())

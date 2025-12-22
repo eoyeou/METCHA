@@ -82,8 +82,28 @@
           </div>
         </div>
 
-        <!-- 오른쪽: 리뷰 작성 버튼 -->
+        <!-- 오른쪽: 리뷰 작성 버튼 및 위시리스트 버튼 -->
         <div class="review-action">
+          <!-- 위시리스트 버튼 (하트) -->
+          <button 
+            v-if="authStore.isAuthenticated"
+            @click="toggleWatchlist" 
+            class="btn-watchlist"
+            :class="{ active: isInWatchlist }"
+            :disabled="isTogglingWatchlist"
+          >
+            <span class="heart-icon">{{ isInWatchlist ? '❤️' : '🤍' }}</span>
+            <span>{{ isInWatchlist ? '위시리스트에서 제거' : '위시리스트에 추가' }}</span>
+          </button>
+          <button 
+            v-else
+            @click="$router.push('/login')" 
+            class="btn-watchlist"
+          >
+            <span class="heart-icon">🤍</span>
+            <span>위시리스트에 추가</span>
+          </button>
+          
           <button 
             v-if="authStore.isAuthenticated"
             @click="toggleReviewForm" 
@@ -221,7 +241,11 @@
           </div>
 
           <div class="review-actions">
-            <button class="btn-like">
+            <button 
+              @click="handleLikeReview(review.id)"
+              class="btn-like"
+              :class="{ 'liked': review.is_liked }"
+            >
               <span>👍</span>
               <span>{{ review.likes_count }}</span>
             </button>
@@ -267,6 +291,8 @@ if (authStore.token) {
 const movie = computed(() => movieStore.currentMovie)
 const showReviewForm = ref(false)
 const editingReview = ref(null)
+const isInWatchlist = ref(false)
+const isTogglingWatchlist = ref(false)
 
 const newReview = ref({
   rating: 0,
@@ -292,8 +318,121 @@ const loadMovie = async () => {
         console.error('사용자 정보 로드 실패:', error)
       }
     }
+    // 위시리스트 확인
+    if (authStore.isAuthenticated) {
+      await checkWatchlist(movieId)
+    }
   } catch (error) {
     console.error('영화 정보 로드 실패:', error)
+  }
+}
+
+// 위시리스트 확인
+const checkWatchlist = async (movieId) => {
+  if (!authStore.isAuthenticated || !authStore.token) {
+    isInWatchlist.value = false
+    return
+  }
+  
+  try {
+    const checkUrl = `${API_URL}/watchlists/${movieId}/check/`
+    console.log('위시리스트 확인 URL:', checkUrl)
+    
+    const response = await axios.get(checkUrl, {
+      headers: {
+        'Authorization': `Token ${authStore.token}`
+      }
+    })
+    console.log('위시리스트 확인 응답:', response.data)
+    isInWatchlist.value = response.data.is_in_watchlist
+  } catch (error) {
+    console.error('위시리스트 확인 실패:', error)
+    // 확인 실패 시 기본값으로 false 설정
+    isInWatchlist.value = false
+  }
+}
+
+// 위시리스트 토글
+const toggleWatchlist = async () => {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+  
+  if (!authStore.token) {
+    alert('로그인 토큰이 없습니다. 다시 로그인해주세요.')
+    router.push('/login')
+    return
+  }
+  
+  const movieId = parseInt(route.params.id)
+  console.log('=== 위시리스트 토글 시작 ===')
+  console.log('영화 ID:', movieId)
+  console.log('현재 상태:', isInWatchlist.value ? '위시리스트에 있음' : '위시리스트에 없음')
+  console.log('토큰:', authStore.token ? '있음' : '없음')
+  
+  isTogglingWatchlist.value = true
+  
+  try {
+    if (isInWatchlist.value) {
+      // 위시리스트에서 제거
+      console.log('위시리스트에서 제거 시도...')
+      const deleteUrl = `${API_URL}/watchlists/${movieId}/`
+      console.log('DELETE URL:', deleteUrl)
+      
+      const response = await axios.delete(deleteUrl, {
+        headers: {
+          'Authorization': `Token ${authStore.token}`
+        }
+      })
+      console.log('✅ 제거 성공:', response.status)
+      isInWatchlist.value = false
+      alert('위시리스트에서 제거되었습니다.')
+    } else {
+      // 위시리스트에 추가
+      console.log('위시리스트에 추가 시도...')
+      const postUrl = `${API_URL}/watchlists/`
+      console.log('POST URL:', postUrl)
+      console.log('요청 데이터:', { movie_id: movieId })
+      
+      const response = await axios.post(postUrl, {
+        movie_id: movieId
+      }, {
+        headers: {
+          'Authorization': `Token ${authStore.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      console.log('✅ 추가 성공:', response.status, response.data)
+      isInWatchlist.value = true
+      alert('위시리스트에 추가되었습니다!')
+    }
+    console.log('=== 위시리스트 토글 완료 ===')
+  } catch (error) {
+    console.error('❌ 위시리스트 토글 실패!')
+    console.error('에러 객체:', error)
+    console.error('에러 메시지:', error.message)
+    console.error('에러 코드:', error.code)
+    
+    if (error.response) {
+      console.error('응답 상태:', error.response.status)
+      console.error('응답 데이터:', error.response.data)
+      console.error('응답 헤더:', error.response.headers)
+      
+      const errorMessage = error.response.data?.detail || 
+                          error.response.data?.message || 
+                          `서버 오류 (${error.response.status})`
+      alert(`위시리스트 처리에 실패했습니다.\n\n${errorMessage}`)
+    } else if (error.request) {
+      console.error('요청은 보냈지만 응답이 없음:', error.request)
+      alert('서버에 연결할 수 없습니다. Django 서버가 실행 중인지 확인하세요.')
+    } else {
+      console.error('요청 설정 중 에러:', error.message)
+      alert(`위시리스트 처리에 실패했습니다.\n\n${error.message}`)
+    }
+    console.error('=== 에러 상세 끝 ===')
+  } finally {
+    isTogglingWatchlist.value = false
   }
 }
 
@@ -414,6 +553,20 @@ const handleDeleteReview = async (reviewId) => {
     } catch (error) {
       alert('리뷰 삭제에 실패했습니다.')
     }
+  }
+}
+
+const handleLikeReview = async (reviewId) => {
+  if (!authStore.isAuthenticated) {
+    alert('로그인이 필요합니다.')
+    router.push('/login')
+    return
+  }
+  
+  try {
+    await movieStore.toggleReviewLike(reviewId, route.params.id)
+  } catch (error) {
+    alert('좋아요 처리에 실패했습니다.')
   }
 }
 
@@ -719,6 +872,44 @@ const toggleFollow = async (userId, user) => {
   line-height: 1.8;
   color: #ddd;
   font-size: 16px;
+}
+
+.btn-watchlist {
+  width: 100%;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-watchlist:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-watchlist.active {
+  background: rgba(233, 69, 96, 0.3);
+  border-color: #e94560;
+}
+
+.btn-watchlist:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.heart-icon {
+  font-size: 24px;
 }
 
 .btn-write-review {

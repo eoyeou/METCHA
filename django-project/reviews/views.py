@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 
-from .models import Review
+from .models import Review, ReviewLike
 from .serializers import ReviewCreateSerializer, ReviewUpdateSerializer
 from movies.serializers import ReviewSerializer
 
@@ -31,38 +31,58 @@ def review_create(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['PUT', 'PATCH'])
+@api_view(['PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
-def review_update(request, review_pk):
+def review_update_or_delete(request, review_pk):
     review = get_object_or_404(Review, pk=review_pk)
     
     # 본인 확인
     if review.user != request.user:
         return Response(
-            {"detail": "본인의 리뷰만 수정할 수 있습니다."}, 
+            {"detail": "본인의 리뷰만 수정/삭제할 수 있습니다."}, 
             status=status.HTTP_403_FORBIDDEN
         )
     
+    if request.method == 'DELETE':
+        review.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    # PUT, PATCH 처리
     serializer = ReviewUpdateSerializer(review, data=request.data, partial=True)
     
     if serializer.is_valid():
         serializer.save()
-        return Response(ReviewSerializer(review).data)
+        return Response(ReviewSerializer(review, context={'request': request}).data)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def review_delete(request, review_pk):
+def review_like(request, review_pk):
+    """리뷰 좋아요/좋아요 취소"""
     review = get_object_or_404(Review, pk=review_pk)
+    user = request.user
     
-    # 본인 확인
-    if review.user != request.user:
-        return Response(
-            {"detail": "본인의 리뷰만 삭제할 수 있습니다."}, 
-            status=status.HTTP_403_FORBIDDEN
-        )
+    # 이미 좋아요를 눌렀는지 확인
+    like, created = ReviewLike.objects.get_or_create(
+        user=user,
+        review=review
+    )
     
-    review.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    if not created:
+        # 이미 좋아요를 눌렀다면 취소
+        like.delete()
+        review.likes_count = max(0, review.likes_count - 1)
+        review.save(update_fields=['likes_count'])
+        is_liked = False
+    else:
+        # 좋아요 추가
+        review.likes_count += 1
+        review.save(update_fields=['likes_count'])
+        is_liked = True
+    
+    return Response({
+        'is_liked': is_liked,
+        'likes_count': review.likes_count
+    })

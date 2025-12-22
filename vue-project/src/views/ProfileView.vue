@@ -89,6 +89,13 @@
         </button>
         <button 
           class="tab-btn" 
+          :class="{ active: activeTab === 'watchlist' }"
+          @click="activeTab = 'watchlist'"
+        >
+          위시리스트
+        </button>
+        <button 
+          class="tab-btn" 
           :class="{ active: activeTab === 'report' }"
           @click="activeTab = 'report'"
         >
@@ -124,6 +131,45 @@
                 <div class="review-meta">
                   <span v-if="review.is_spoiler" class="spoiler-badge">스포일러</span>
                   <span class="review-date">{{ formatDate(review.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 위시리스트 탭 -->
+        <div v-if="activeTab === 'watchlist'" class="watchlist-section">
+          <div v-if="watchlist.length === 0" class="empty-state">
+            위시리스트에 추가한 영화가 없습니다.
+          </div>
+          <div v-else class="watchlist-grid">
+            <div 
+              v-for="item in watchlist" 
+              :key="item.id"
+              class="watchlist-card"
+              @click="goToMovie(item.movie.id)"
+            >
+              <div class="watchlist-poster">
+                <img 
+                  v-if="item.movie.poster_url" 
+                  :src="item.movie.poster_url" 
+                  :alt="item.movie.title"
+                />
+                <div v-else class="poster-placeholder">No Image</div>
+                <div class="watchlist-overlay">
+                  <button 
+                    @click.stop="removeFromWatchlist(item.movie.id)"
+                    class="btn-remove-watchlist"
+                  >
+                    ❌
+                  </button>
+                </div>
+              </div>
+              <div class="watchlist-info">
+                <h3 class="watchlist-title">{{ item.movie.title }}</h3>
+                <p class="watchlist-year">{{ item.movie.release_year }}</p>
+                <div class="watchlist-rating">
+                  ⭐ {{ item.movie.avg_rating.toFixed(1) }}
                 </div>
               </div>
             </div>
@@ -301,6 +347,7 @@ if (authStore.token) {
 
 const userProfile = ref(null)
 const reviews = ref([])
+const watchlist = ref([])
 const preferenceReport = ref(null)
 const activeTab = ref('reviews')
 const isLoading = ref(false)
@@ -368,6 +415,58 @@ const fetchReviews = async () => {
     reviews.value = response.data
   } catch (error) {
     console.error('리뷰 목록 로드 실패:', error)
+  }
+}
+
+// 위시리스트 가져오기
+const fetchWatchlist = async () => {
+  try {
+    const route = router.currentRoute.value
+    const userId = route.query.user
+    
+    // 본인 위시리스트만 조회 가능
+    if (userId && userId !== authStore.user?.id?.toString()) {
+      watchlist.value = []
+      return
+    }
+    
+    if (!authStore.isAuthenticated) {
+      watchlist.value = []
+      return
+    }
+    
+    const config = {}
+    if (authStore.token) {
+      config.headers = {
+        'Authorization': `Token ${authStore.token}`
+      }
+    }
+    
+    const response = await axios.get(`${API_URL}/watchlists/`, config)
+    watchlist.value = response.data
+  } catch (error) {
+    console.error('위시리스트 로드 실패:', error)
+    watchlist.value = []
+  }
+}
+
+// 위시리스트에서 제거
+const removeFromWatchlist = async (movieId) => {
+  if (!confirm('위시리스트에서 제거하시겠습니까?')) {
+    return
+  }
+  
+  try {
+    await axios.delete(`${API_URL}/watchlists/${movieId}/`, {
+      headers: {
+        'Authorization': `Token ${authStore.token}`
+      }
+    })
+    // 위시리스트 다시 가져오기
+    await fetchWatchlist()
+  } catch (error) {
+    console.error('위시리스트 제거 실패:', error)
+    alert('위시리스트에서 제거하는데 실패했습니다.')
   }
 }
 
@@ -868,6 +967,7 @@ const goToUserProfile = (userId) => {
 onMounted(async () => {
   await fetchProfile()
   await fetchReviews()
+  await fetchWatchlist()
   await fetchPreferenceReport()
 })
 </script>
@@ -1074,6 +1174,101 @@ onMounted(async () => {
   background: #f9f9f9;
   border-radius: 8px;
   padding: 30px;
+}
+
+/* Watchlist Section */
+.watchlist-section {
+  width: 100%;
+}
+
+.watchlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.watchlist-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.watchlist-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.watchlist-poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  position: relative;
+  overflow: hidden;
+}
+
+.watchlist-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.watchlist-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.watchlist-card:hover .watchlist-overlay {
+  opacity: 1;
+}
+
+.btn-remove-watchlist {
+  background: rgba(231, 76, 60, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.btn-remove-watchlist:hover {
+  background: rgba(231, 76, 60, 1);
+  transform: scale(1.1);
+}
+
+.watchlist-info {
+  padding: 12px;
+}
+
+.watchlist-title {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlist-year {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.watchlist-rating {
+  font-size: 14px;
+  color: #f39c12;
+  font-weight: bold;
 }
 
 /* Reviews Section */
