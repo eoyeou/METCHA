@@ -18,10 +18,10 @@ from .serializers import (
 from reviews.models import Review
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([AllowAny])
 def profile_detail(request, user_id=None):
-    """사용자 프로필 정보 조회"""
+    """사용자 프로필 정보 조회 또는 수정"""
     if user_id:
         user = get_object_or_404(User, id=user_id)
     else:
@@ -36,8 +36,35 @@ def profile_detail(request, user_id=None):
                     status=status.HTTP_404_NOT_FOUND
                 )
     
-    serializer = UserProfileSerializer(user, context={'request': request})
-    return Response(serializer.data)
+    if request.method == 'GET':
+        serializer = UserProfileSerializer(user, context={'request': request})
+        return Response(serializer.data)
+    
+    elif request.method == 'PATCH':
+        # 프로필 수정 (본인만 가능)
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "인증이 필요합니다."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        if request.user.id != user.id:
+            return Response(
+                {"detail": "본인의 프로필만 수정할 수 있습니다."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # 프로필 이미지 업로드
+        if 'profile_image' in request.FILES:
+            user.profile_image = request.FILES['profile_image']
+            user.save()
+            serializer = UserProfileSerializer(user, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"detail": "프로필 이미지가 필요합니다."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 @api_view(['GET'])

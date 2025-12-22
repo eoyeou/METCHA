@@ -56,9 +56,33 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 초기화 시 토큰이 있으면 헤더에 설정
+  // 사용자 정보 가져오기
+  const fetchUser = async () => {
+    if (!token.value) {
+      user.value = null
+      return null
+    }
+    try {
+      axios.defaults.headers.common['Authorization'] = `Token ${token.value}`
+      const response = await axios.get(`${API_URL}/accounts/profile/`)
+      user.value = response.data
+      return response.data
+    } catch (err) {
+      console.error('사용자 정보 가져오기 실패:', err)
+      // 토큰이 유효하지 않으면 제거
+      token.value = null
+      user.value = null
+      localStorage.removeItem('token')
+      delete axios.defaults.headers.common['Authorization']
+      return null
+    }
+  }
+
+  // 초기화 시 토큰이 있으면 헤더에 설정하고 사용자 정보 가져오기
   if (token.value) {
     axios.defaults.headers.common['Authorization'] = `Token ${token.value}`
+    // 사용자 정보 가져오기 (비동기이므로 즉시 실행)
+    fetchUser()
   }
 
   return {
@@ -67,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     login,
     register,
-    logout
+    logout,
+    fetchUser
   }
 })

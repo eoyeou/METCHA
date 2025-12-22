@@ -27,7 +27,7 @@
             placeholder="영화 제목을 검색하세요..."
             class="search-input"
           >
-          <button class="search-btn">🔍</button>
+          <button @click="goToSearchResults" class="search-btn">🔍</button>
         </div>
 
         <!-- 검색 결과 (자동완성) -->
@@ -59,32 +59,171 @@
         </div>
       </div>
 
-      <!-- 인기 영화 목록 (검색 안 할 때) -->
-      <div v-if="!searchQuery" class="popular-movies">
-        <h2>인기 영화</h2>
-        <div v-if="popularMovies.length === 0" class="empty-state">
-          <p>영화를 불러오는 중...</p>
-          <p style="font-size: 12px; color: #aaa; margin-top: 10px;">
-            콘솔(F12)을 확인하여 디버깅 정보를 확인하세요.
-          </p>
-        </div>
-        <div v-else class="movie-grid">
-          <div
-            v-for="movie in popularMovies"
-            :key="movie.id"
-            @click="goToMovie(movie.id)"
-            class="movie-card"
-          >
-            <img 
-              :src="movie.poster_url || 'https://via.placeholder.com/200x300'" 
-              :alt="movie.title"
-              class="movie-poster"
+      <!-- 영화 섹션들 (검색 안 할 때) -->
+      <div v-if="!searchQuery" class="movies-sections">
+        <!-- 큰 포스터 카드 (최신 영화) -->
+        <div v-if="featuredMovies.length > 0" class="featured-section">
+          <h2>신작 영화</h2>
+          <div class="featured-movies">
+            <div
+              v-for="movie in featuredMovies.slice(0, 3)"
+              :key="movie.id"
+              @click="goToMovie(movie.id)"
+              class="featured-card"
+              :style="{ backgroundImage: `url(${movie.poster_url || 'https://via.placeholder.com/800x450'})` }"
             >
-            <div class="movie-info">
-              <h3>{{ movie.title }}</h3>
-              <p class="movie-year">{{ movie.release_year }}</p>
-              <p class="movie-rating">⭐ {{ movie.avg_rating.toFixed(1) }}</p>
+              <div class="featured-overlay"></div>
+              <div class="featured-content">
+                <h3>{{ movie.title }}</h3>
+                <p class="featured-description">{{ movie.kor_description || movie.description || '줄거리 정보가 없습니다.' }}</p>
+                <div class="featured-meta">
+                  <span class="featured-year">{{ movie.release_year }}</span>
+                  <span class="featured-rating">⭐ {{ movie.avg_rating.toFixed(1) }}</span>
+                </div>
+                <button class="btn-more-info">더 알아보기</button>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 인기 영화 슬라이더 -->
+        <div class="movie-slider-section">
+          <h2>인기 영화</h2>
+          <div v-if="popularMovies.length === 0" class="empty-state">
+            <p>영화를 불러오는 중...</p>
+          </div>
+          <div v-else class="movie-slider-container">
+            <button 
+              @click="scrollSlider('left', 'popular')" 
+              class="slider-btn slider-btn-left"
+              :disabled="!canScrollLeft"
+            >
+              ‹
+            </button>
+            <div 
+              ref="sliderRef"
+              class="movie-slider"
+              @scroll="updateScrollButtons"
+            >
+              <div
+                v-for="movie in popularMovies"
+                :key="movie.id"
+                @click="goToMovie(movie.id)"
+                class="movie-card"
+              >
+                <img 
+                  :src="movie.poster_url || 'https://via.placeholder.com/200x300'" 
+                  :alt="movie.title"
+                  class="movie-poster"
+                >
+                <div class="movie-info">
+                  <h3>{{ movie.title }}</h3>
+                  <p class="movie-year">{{ movie.release_year }}</p>
+                  <p class="movie-rating">⭐ {{ movie.avg_rating.toFixed(1) }}</p>
+                </div>
+              </div>
+            </div>
+            <button 
+              @click="scrollSlider('right', 'popular')" 
+              class="slider-btn slider-btn-right"
+              :disabled="!canScrollRight"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        <!-- 평점 높은 영화 슬라이더 -->
+        <div class="movie-slider-section">
+          <h2>평점 높은 영화</h2>
+          <div v-if="topRatedMovies.length === 0" class="empty-state">
+            <p>영화를 불러오는 중...</p>
+          </div>
+          <div v-else class="movie-slider-container">
+            <button 
+              @click="scrollSlider('left', 'topRated')" 
+              class="slider-btn slider-btn-left"
+              :disabled="!canScrollTopRatedLeft"
+            >
+              ‹
+            </button>
+            <div 
+              ref="topRatedSliderRef"
+              class="movie-slider"
+              @scroll="updateTopRatedScrollButtons"
+            >
+              <div
+                v-for="movie in topRatedMovies"
+                :key="movie.id"
+                @click="goToMovie(movie.id)"
+                class="movie-card"
+              >
+                <img 
+                  :src="movie.poster_url || 'https://via.placeholder.com/200x300'" 
+                  :alt="movie.title"
+                  class="movie-poster"
+                >
+                <div class="movie-info">
+                  <h3>{{ movie.title }}</h3>
+                  <p class="movie-year">{{ movie.release_year }}</p>
+                  <p class="movie-rating">⭐ {{ movie.avg_rating.toFixed(1) }}</p>
+                </div>
+              </div>
+            </div>
+            <button 
+              @click="scrollSlider('right', 'topRated')" 
+              class="slider-btn slider-btn-right"
+              :disabled="!canScrollTopRatedRight"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        <!-- 장르별 슬라이더들 -->
+        <div v-for="genreSection in genreSections" :key="genreSection.genre" class="movie-slider-section">
+          <h2>{{ genreSection.title }}</h2>
+          <div v-if="genreSection.movies.length === 0" class="empty-state">
+            <p>영화를 불러오는 중...</p>
+          </div>
+          <div v-else class="movie-slider-container">
+            <button 
+              @click="scrollSlider('left', genreSection.genre)" 
+              class="slider-btn slider-btn-left"
+              :disabled="!genreSection.canScrollLeft"
+            >
+              ‹
+            </button>
+            <div 
+              :ref="el => genreSection.sliderRef = el"
+              class="movie-slider"
+              @scroll="() => updateGenreScrollButtons(genreSection.genre)"
+            >
+              <div
+                v-for="movie in genreSection.movies"
+                :key="movie.id"
+                @click="goToMovie(movie.id)"
+                class="movie-card"
+              >
+                <img 
+                  :src="movie.poster_url || 'https://via.placeholder.com/200x300'" 
+                  :alt="movie.title"
+                  class="movie-poster"
+                >
+                <div class="movie-info">
+                  <h3>{{ movie.title }}</h3>
+                  <p class="movie-year">{{ movie.release_year }}</p>
+                  <p class="movie-rating">⭐ {{ movie.avg_rating.toFixed(1) }}</p>
+                </div>
+              </div>
+            </div>
+            <button 
+              @click="scrollSlider('right', genreSection.genre)" 
+              class="slider-btn slider-btn-right"
+              :disabled="!genreSection.canScrollRight"
+            >
+              ›
+            </button>
           </div>
         </div>
       </div>
@@ -93,7 +232,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
@@ -105,55 +244,95 @@ const searchQuery = ref('')
 const searchResults = ref([])
 const showResults = ref(false)
 const popularMovies = ref([])
+const featuredMovies = ref([])
+const topRatedMovies = ref([])
+const sliderRef = ref(null)
+const topRatedSliderRef = ref(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(true)
+const canScrollTopRatedLeft = ref(false)
+const canScrollTopRatedRight = ref(true)
+
+// 장르별 슬라이더 데이터 (한국어/영어 모두 지원)
+const genreSections = ref([
+  { genre: '드라마', title: 'Top 10 드라마 영화', movies: [], sliderRef: null, canScrollLeft: false, canScrollRight: true },
+  { genre: '액션', title: 'Top 10 액션 영화', movies: [], sliderRef: null, canScrollLeft: false, canScrollRight: true },
+  { genre: '공포', title: 'Top 10 공포 영화', movies: [], sliderRef: null, canScrollLeft: false, canScrollRight: true },
+  { genre: '코미디', title: 'Top 10 코미디 영화', movies: [], sliderRef: null, canScrollLeft: false, canScrollRight: true },
+])
 
 const API_URL = 'http://127.0.0.1:8000/api'
 
-// 페이지 로드 시 인기 영화 가져오기
-onMounted(async () => {
-  console.log('=== 영화 목록 로드 시작 ===')
-  console.log('API URL:', `${API_URL}/movies/`)
-  
+// 영화 데이터 로드 함수들
+const loadPopularMovies = async () => {
   try {
-    console.log('API 호출 중...')
-    const response = await axios.get(`${API_URL}/movies/`)
-    console.log('✅ API 응답 받음!')
-    console.log('응답 상태:', response.status)
-    console.log('응답 데이터 타입:', typeof response.data)
-    console.log('배열인가?', Array.isArray(response.data))
-    console.log('데이터 길이:', Array.isArray(response.data) ? response.data.length : 'N/A')
-    
-    // REST Framework pagination이 활성화되어 있으면 results를 사용
-    let movies = []
-    if (Array.isArray(response.data)) {
-      movies = response.data
-      console.log('✅ 배열로 받음, 영화 개수:', movies.length)
-    } else if (response.data && response.data.results && Array.isArray(response.data.results)) {
-      movies = response.data.results
-      console.log('✅ pagination 형식으로 받음, 영화 개수:', movies.length)
-    } else {
-      console.error('❌ 예상하지 못한 형식:', response.data)
-      return
-    }
-    
-    console.log('처리할 영화 개수:', movies.length)
-    popularMovies.value = movies.slice(0, 12) // 상위 12개만
-    console.log('✅ popularMovies에 저장된 개수:', popularMovies.value.length)
-    console.log('첫 번째 영화:', popularMovies.value[0])
-    console.log('=== 완료 ===')
+    const response = await axios.get(`${API_URL}/movies/`, {
+      params: { order_by: 'reviews' }
+    })
+    let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+    popularMovies.value = movies.slice(0, 12)
+    await nextTick()
+    updateScrollButtons()
   } catch (error) {
-    console.error('❌ 영화 목록 로드 실패!')
-    console.error('에러:', error)
-    console.error('에러 메시지:', error.message)
-    if (error.response) {
-      console.error('응답 상태:', error.response.status)
-      console.error('응답 데이터:', error.response.data)
-    } else if (error.request) {
-      console.error('요청은 보냈지만 응답이 없음 - 서버가 실행 중인지 확인!')
-    }
+    console.error('인기 영화 로드 실패:', error)
   }
+}
+
+const loadFeaturedMovies = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/movies/`, {
+      params: { order_by: '-created_at' }
+    })
+    let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+    featuredMovies.value = movies.slice(0, 3)
+  } catch (error) {
+    console.error('신작 영화 로드 실패:', error)
+  }
+}
+
+const loadTopRatedMovies = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/movies/`, {
+      params: { order_by: 'rating' }
+    })
+    let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+    topRatedMovies.value = movies.slice(0, 12)
+    await nextTick()
+    updateTopRatedScrollButtons()
+  } catch (error) {
+    console.error('평점 높은 영화 로드 실패:', error)
+  }
+}
+
+const loadGenreMovies = async (genreSection) => {
+  try {
+    const response = await axios.get(`${API_URL}/movies/`, {
+      params: { genre: genreSection.genre, order_by: 'rating' }
+    })
+    let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+    genreSection.movies = movies.slice(0, 10)
+    console.log(`${genreSection.title}: ${movies.length}개 영화 로드됨`)
+    await nextTick()
+    updateGenreScrollButtons(genreSection.genre)
+  } catch (error) {
+    console.error(`${genreSection.title} 영화 로드 실패:`, error)
+    console.error('에러 상세:', error.response?.data || error.message)
+    // 에러가 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록
+    genreSection.movies = []
+  }
+}
+
+// 페이지 로드 시 모든 영화 데이터 가져오기
+onMounted(async () => {
+  await Promise.all([
+    loadPopularMovies(),
+    loadFeaturedMovies(),
+    loadTopRatedMovies(),
+    ...genreSections.value.map(section => loadGenreMovies(section))
+  ])
 })
 
-// 검색 처리 (실시간)
+// 검색 처리 (실시간 자동완성)
 let searchTimeout = null
 const handleSearch = () => {
   // 디바운싱: 입력 후 300ms 후에 검색
@@ -184,12 +363,82 @@ const handleSearch = () => {
   }, 300)
 }
 
+// 검색 결과 페이지로 이동
+const goToSearchResults = () => {
+  if (searchQuery.value.trim()) {
+    router.push({ 
+      path: '/search', 
+      query: { q: searchQuery.value.trim() } 
+    })
+  }
+}
+
 // 영화 상세 페이지로 이동
 const goToMovie = (movieId) => {
   searchQuery.value = ''
   searchResults.value = []
   showResults.value = false
   router.push(`/movies/${movieId}`)
+}
+
+// 슬라이더 스크롤
+const scrollSlider = (direction, type = 'popular') => {
+  let targetRef = null
+  
+  if (type === 'popular') {
+    targetRef = sliderRef.value
+  } else if (type === 'topRated') {
+    targetRef = topRatedSliderRef.value
+  } else {
+    // 장르별 슬라이더
+    const genreSection = genreSections.value.find(s => s.genre === type)
+    if (genreSection && genreSection.sliderRef) {
+      targetRef = genreSection.sliderRef
+    }
+  }
+  
+  if (!targetRef) return
+  
+  const scrollAmount = 600 // 한 번에 스크롤할 픽셀 수
+  const currentScroll = targetRef.scrollLeft
+  
+  if (direction === 'left') {
+    targetRef.scrollTo({
+      left: currentScroll - scrollAmount,
+      behavior: 'smooth'
+    })
+  } else {
+    targetRef.scrollTo({
+      left: currentScroll + scrollAmount,
+      behavior: 'smooth'
+    })
+  }
+}
+
+// 스크롤 버튼 상태 업데이트
+const updateScrollButtons = () => {
+  if (!sliderRef.value) return
+  
+  const { scrollLeft, scrollWidth, clientWidth } = sliderRef.value
+  canScrollLeft.value = scrollLeft > 0
+  canScrollRight.value = scrollLeft < scrollWidth - clientWidth - 10
+}
+
+const updateTopRatedScrollButtons = () => {
+  if (!topRatedSliderRef.value) return
+  
+  const { scrollLeft, scrollWidth, clientWidth } = topRatedSliderRef.value
+  canScrollTopRatedLeft.value = scrollLeft > 0
+  canScrollTopRatedRight.value = scrollLeft < scrollWidth - clientWidth - 10
+}
+
+const updateGenreScrollButtons = (genre) => {
+  const genreSection = genreSections.value.find(s => s.genre === genre)
+  if (!genreSection || !genreSection.sliderRef) return
+  
+  const { scrollLeft, scrollWidth, clientWidth } = genreSection.sliderRef
+  genreSection.canScrollLeft = scrollLeft > 0
+  genreSection.canScrollRight = scrollLeft < scrollWidth - clientWidth - 10
 }
 
 // 네비게이션
@@ -400,16 +649,166 @@ onMounted(() => {
   margin-top: 10px;
 }
 
-/* 인기 영화 그리드 */
-.popular-movies h2 {
-  font-size: 32px;
-  margin-bottom: 30px;
+/* 영화 섹션들 */
+.movies-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
 }
 
-.movie-grid {
+.movie-slider-section {
+  margin-bottom: 40px;
+}
+
+.movie-slider-section h2 {
+  font-size: 32px;
+  margin-bottom: 30px;
+  font-weight: bold;
+}
+
+/* 큰 포스터 카드 섹션 */
+.featured-section {
+  margin-bottom: 60px;
+}
+
+.featured-section h2 {
+  font-size: 32px;
+  margin-bottom: 30px;
+  font-weight: bold;
+}
+
+.featured-movies {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 30px;
+  margin-bottom: 40px;
+}
+
+.featured-card {
+  position: relative;
+  height: 500px;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.featured-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border-color: rgba(233, 69, 96, 0.5);
+}
+
+.featured-card:hover .featured-overlay {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.85));
+}
+
+.featured-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.8));
+  transition: all 0.3s;
+}
+
+.featured-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.featured-content h3 {
+  font-size: 36px;
+  margin-bottom: 20px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.featured-description {
+  font-size: 16px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 25px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.featured-meta {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 25px;
+  font-size: 18px;
+}
+
+.featured-year {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.featured-rating {
+  color: #f39c12;
+  font-weight: bold;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.btn-more-info {
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #e94560, #f39c12);
+  border: none;
+  border-radius: 25px;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  align-self: flex-start;
+}
+
+.btn-more-info:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+}
+
+.movie-slider-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.movie-slider {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 10px 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  /* 스크롤바 숨기기 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.movie-slider::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .movie-card {
@@ -418,10 +817,13 @@ onMounted(() => {
   border-radius: 15px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
+  flex: 0 0 200px; /* 고정 너비, 축소/확대 불가 */
+  min-width: 200px;
+  max-width: 200px;
 }
 
 .movie-card:hover {
-  transform: translateY(-10px);
+  transform: translateY(-10px) scale(1.05);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
 }
 
@@ -429,6 +831,7 @@ onMounted(() => {
   width: 100%;
   aspect-ratio: 2/3;
   object-fit: cover;
+  display: block;
 }
 
 .movie-info {
@@ -464,6 +867,45 @@ onMounted(() => {
   margin: 10px 0;
 }
 
+/* 슬라이더 버튼 */
+.slider-btn {
+  width: 60px;
+  height: 380px; /* 영화 카드 전체 높이: 포스터(300px) + 정보영역(약80px) */
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+}
+
+.slider-btn:hover:not(:disabled) {
+  background: rgba(233, 69, 96, 0.8);
+  border-color: #e94560;
+  transform: scale(1.1);
+}
+
+.slider-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.slider-btn-left {
+  margin-right: 10px;
+}
+
+.slider-btn-right {
+  margin-left: 10px;
+}
+
 /* 반응형 */
 @media (max-width: 768px) {
   .main-content {
@@ -474,9 +916,44 @@ onMounted(() => {
     margin-bottom: 40px;
   }
 
-  .movie-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  .featured-movies {
+    grid-template-columns: 1fr;
     gap: 20px;
+  }
+
+  .featured-card {
+    height: 400px;
+  }
+
+  .featured-content {
+    padding: 30px 20px;
+  }
+
+  .featured-content h3 {
+    font-size: 28px;
+  }
+
+  .featured-description {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-size: 14px;
+  }
+
+  .movie-slider-section h2,
+  .featured-section h2 {
+    font-size: 24px;
+  }
+
+  .movie-card {
+    flex: 0 0 150px;
+    min-width: 150px;
+    max-width: 150px;
+  }
+  
+  .slider-btn {
+    width: 50px;
+    height: 285px; /* 모바일 영화 카드 전체 높이: 포스터(225px) + 정보영역(약60px) */
+    font-size: 30px;
   }
 }
 </style>

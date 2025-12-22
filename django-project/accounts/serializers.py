@@ -37,6 +37,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     following_count = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
     is_self = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -45,6 +46,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'profile_image', 'review_count', 'followers_count', 'following_count',
             'is_following', 'is_self'
         ]
+    
+    def get_profile_image(self, obj):
+        """프로필 이미지 전체 URL 반환"""
+        if obj.profile_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_image.url)
+            return obj.profile_image.url
+        return None
     
     def get_review_count(self, obj):
         return obj.reviews.count()
