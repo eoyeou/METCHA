@@ -32,50 +32,75 @@
     </div>
 
     <div class="profile-content">
-      <div class="profile-info">
-        <div class="profile-image-placeholder">
-          <img 
-            v-if="userProfile?.profile_image" 
-            :src="userProfile.profile_image" 
-            alt="Profile"
-            class="profile-image"
+      <!-- 프로필 ID 배지 -->
+      <div class="profile-id-section">
+        <div class="id-badge hover-trigger">{{ (userProfile?.username || 'USER_01').toUpperCase() }}</div>
+        <div class="level-text">LEVEL {{ Math.min(userProfile?.review_count || 0, 10) }} OBSERVER</div>
+        
+        <!-- 프로필 이미지 (작게) -->
+        <div v-if="isOwnProfile" class="profile-image-mini">
+          <div class="profile-image-placeholder-mini">
+            <img 
+              v-if="previewImage || userProfile?.profile_image" 
+              :src="previewImage || userProfile?.profile_image" 
+              alt="Profile"
+              class="profile-image-mini-img"
+            />
+          </div>
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*"
+            @change="handleImageSelect"
+            style="display: none"
           />
-          <div v-else class="profile-image-placeholder-text">User Profile Image</div>
-        </div>
-        
-        <div class="profile-stats">
-          <div class="stat-item">
-            <div class="stat-label">리뷰 수</div>
-            <div class="stat-value">{{ userProfile?.review_count || 0 }}</div>
-          </div>
-          <div class="stat-item clickable" @click="showFollowersModalHandler">
-            <div class="stat-label">팔로워</div>
-            <div class="stat-value">{{ userProfile?.followers_count || 0 }}</div>
-          </div>
-          <div class="stat-item clickable" @click="showFollowingModalHandler">
-            <div class="stat-label">팔로잉</div>
-            <div class="stat-value">{{ userProfile?.following_count || 0 }}</div>
+          <button 
+            @click="triggerFileInput"
+            class="btn-upload-mini"
+            :disabled="isUploading"
+          >
+            {{ isUploading ? 'UPLOADING...' : 'UPLOAD_IMAGE' }}
+          </button>
+          <div v-if="previewImage" class="upload-actions-mini">
+            <button @click="uploadImage" class="btn-save-mini" :disabled="isUploading">SAVE</button>
+            <button @click="cancelImageUpload" class="btn-cancel-mini" :disabled="isUploading">CANCEL</button>
           </div>
         </div>
         
-        <!-- 팔로우 버튼 (본인이 아닐 때만 표시) -->
-        <div v-if="!userProfile?.is_self && userProfile?.id !== authStore.user?.id" class="follow-button-container">
+        <!-- 팔로우 버튼 (본인이 아닐 때만) -->
+        <div v-if="!userProfile?.is_self && userProfile?.id !== authStore.user?.id" class="follow-button-profile">
           <button 
             v-if="!userProfile?.is_following"
             @click="handleFollow"
-            class="btn-follow"
+            class="btn-follow-profile"
             :disabled="isFollowing"
           >
-            {{ isFollowing ? '처리 중...' : '팔로우' }}
+            {{ isFollowing ? 'PROCESSING...' : 'FOLLOW' }}
           </button>
           <button 
             v-else
             @click="handleUnfollow"
-            class="btn-unfollow"
+            class="btn-unfollow-profile"
             :disabled="isFollowing"
           >
-            {{ isFollowing ? '처리 중...' : '언팔로우' }}
+            {{ isFollowing ? 'PROCESSING...' : 'UNFOLLOW' }}
           </button>
+        </div>
+      </div>
+
+      <!-- 통계 -->
+      <div class="profile-stats-modern">
+        <div class="stat-item-modern clickable" @click="showFollowersModalHandler">
+          <div class="stat-label-modern">FOLLOWERS</div>
+          <div class="stat-value-modern">{{ userProfile?.followers_count || 0 }}</div>
+        </div>
+        <div class="stat-item-modern clickable" @click="showFollowingModalHandler">
+          <div class="stat-label-modern">FOLLOWING</div>
+          <div class="stat-value-modern">{{ userProfile?.following_count || 0 }}</div>
+        </div>
+        <div class="stat-item-modern">
+          <div class="stat-label-modern">REVIEWS</div>
+          <div class="stat-value-modern">{{ userProfile?.review_count || 0 }}</div>
         </div>
       </div>
 
@@ -85,14 +110,21 @@
           :class="{ active: activeTab === 'reviews' }"
           @click="activeTab = 'reviews'"
         >
-          내 Review
+          REVIEWS
+        </button>
+        <button 
+          class="tab-btn" 
+          :class="{ active: activeTab === 'wishlist' }"
+          @click="activeTab = 'wishlist'"
+        >
+          WISHLIST
         </button>
         <button 
           class="tab-btn" 
           :class="{ active: activeTab === 'report' }"
           @click="activeTab = 'report'"
         >
-          내 취향 Report
+          REPORT
         </button>
       </div>
 
@@ -130,8 +162,57 @@
           </div>
         </div>
 
+        <!-- 위시리스트 탭 (보고싶은 영화) -->
+        <div v-if="activeTab === 'wishlist'" class="watchlist-section">
+          <div v-if="wishlistItems.length === 0" class="empty-state">
+            위시리스트에 추가한 영화가 없습니다.
+          </div>
+          <div v-else class="watchlist-grid">
+            <div 
+              v-for="item in wishlistItems" 
+              :key="item.id"
+              class="watchlist-card"
+              @click="goToMovie(item.movie.id)"
+            >
+              <div class="watchlist-poster">
+                <img 
+                  v-if="item.movie.poster_url" 
+                  :src="item.movie.poster_url" 
+                  :alt="item.movie.title"
+                />
+                <div v-else class="poster-placeholder">No Image</div>
+                <div class="watchlist-overlay">
+                  <button 
+                    @click.stop="removeFromWatchlist(item.movie.id)"
+                    class="btn-remove-watchlist"
+                  >
+                    ❌
+                  </button>
+                </div>
+              </div>
+              <div class="watchlist-info">
+                <h3 class="watchlist-title">{{ item.movie.title }}</h3>
+                <p class="watchlist-year">{{ item.movie.release_year }}</p>
+                <div class="watchlist-rating">
+                  ⭐ {{ item.movie.avg_rating.toFixed(1) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
         <!-- 내 취향 Report 탭 -->
         <div v-if="activeTab === 'report'" class="report-section">
+          <!-- 히트맵 그리드 -->
+          <div class="profile-heatmap-wrapper">
+            <div class="heatmap-grid" ref="heatmapRef"></div>
+          </div>
+          
+          <div class="analysis-text">
+            ANALYSIS COMPLETE.<br>
+            DOMINANT TRAIT: <span class="trait-highlight">VISUAL_SEEKER</span>
+          </div>
           <div v-if="!preferenceReport" class="report-empty">
             <p>취향 리포트가 없습니다.</p>
             <button class="btn-generate" @click="generateReport">리포트 생성하기</button>
@@ -152,39 +233,53 @@
                 {{ isGeneratingReport ? '분석 중...' : '취향 다시 분석하기' }}
               </button>
             </div>
-            <div class="report-left">
+            <div class="report-main-content">
+              <div class="report-left">
+                <ul class="report-list">
+                  <li v-if="preferenceReport.genre_distribution">
+                    <strong>TOP 장르</strong>
+                    <div class="report-tags">
+                      <span v-for="(percent, genre) in preferenceReport.genre_distribution" :key="genre" class="report-tag">
+                        {{ genre }} <span class="tag-value">({{ percent }}%)</span>
+                      </span>
+                    </div>
+                  </li>
+                  <li v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평균 평점']">
+                    <strong>평균 별점</strong>
+                    <div class="report-value">{{ preferenceReport.mood_analysis['평균 평점'] }}점</div>
+                  </li>
+                  <li v-if="preferenceReport.director_preferences">
+                    <strong>선호 감독</strong>
+                    <div class="report-tags">
+                      <span v-for="(count, director) in preferenceReport.director_preferences" :key="director" class="report-tag">
+                        {{ director }} <span class="tag-value">({{ count }}편)</span>
+                      </span>
+                    </div>
+                  </li>
+                  <li v-if="preferenceReport.top_rated_movies && preferenceReport.top_rated_movies.length > 0">
+                    <strong>높은 평점 영화</strong>
+                    <div class="report-tags">
+                      <span v-for="movie in preferenceReport.top_rated_movies" :key="movie" class="report-tag">
+                        {{ movie }}
+                      </span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div class="report-right">
+                <div class="report-visualization">
+                  <p>시각화 영역</p>
+                  <p class="visualization-note">(네트워크 그래프 등 추후 구현)</p>
+                </div>
+              </div>
+            </div>
+            <div v-if="preferenceReport.summary" class="report-summary-wrapper">
               <ul class="report-list">
-                <li v-if="preferenceReport.genre_distribution">
-                  <strong>TOP 장르:</strong>
-                  <span v-for="(percent, genre) in preferenceReport.genre_distribution" :key="genre">
-                    {{ genre }} ({{ percent }}%)
-                  </span>
-                </li>
-                <li v-if="preferenceReport.mood_analysis">
-                  <strong>평균 별점:</strong> {{ preferenceReport.mood_analysis['평균 평점'] }}점
-                </li>
-                <li v-if="preferenceReport.director_preferences">
-                  <strong>선호 감독:</strong>
-                  <span v-for="(count, director) in preferenceReport.director_preferences" :key="director">
-                    {{ director }} ({{ count }}편)
-                  </span>
-                </li>
-                <li v-if="preferenceReport.top_rated_movies && preferenceReport.top_rated_movies.length > 0">
-                  <strong>높은 평점 영화:</strong>
-                  <span v-for="movie in preferenceReport.top_rated_movies" :key="movie">
-                    {{ movie }}
-                  </span>
-                </li>
-                <li v-if="preferenceReport.summary">
-                  <strong>한 줄 요약:</strong> {{ preferenceReport.summary }}
+                <li class="report-summary">
+                  <strong>한 줄 요약</strong>
+                  <div class="report-summary-text">{{ preferenceReport.summary }}</div>
                 </li>
               </ul>
-            </div>
-            <div class="report-right">
-              <div class="report-visualization">
-                <p>시각화 영역</p>
-                <p class="visualization-note">(네트워크 그래프 등 추후 구현)</p>
-              </div>
             </div>
           </div>
         </div>
@@ -280,7 +375,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
@@ -301,6 +396,7 @@ if (authStore.token) {
 
 const userProfile = ref(null)
 const reviews = ref([])
+const watchlist = ref([])
 const preferenceReport = ref(null)
 const activeTab = ref('reviews')
 const isLoading = ref(false)
@@ -311,6 +407,26 @@ const showFollowingModal = ref(false)
 const followers = ref([])
 const following = ref([])
 const currentUserId = ref(null)
+
+// 프로필 이미지 업로드 관련
+const fileInput = ref(null)
+const previewImage = ref(null)
+const selectedFile = ref(null)
+const isUploading = ref(false)
+const heatmapRef = ref(null)
+
+// 본인 프로필인지 확인하는 computed
+const isOwnProfile = computed(() => {
+  if (!authStore.isAuthenticated || !userProfile.value || !authStore.user?.id) {
+    return false
+  }
+  return userProfile.value.is_self || userProfile.value.id === authStore.user.id
+})
+
+// 위시리스트 (보고싶은 영화 - want 상태)
+const wishlistItems = computed(() => {
+  return watchlist.value.filter(item => item.status === 'want')
+})
 
 // 프로필 정보 가져오기
 const fetchProfile = async () => {
@@ -368,6 +484,58 @@ const fetchReviews = async () => {
     reviews.value = response.data
   } catch (error) {
     console.error('리뷰 목록 로드 실패:', error)
+  }
+}
+
+// 위시리스트 가져오기
+const fetchWatchlist = async () => {
+  try {
+    const route = router.currentRoute.value
+    const userId = route.query.user
+    
+    // 본인 위시리스트만 조회 가능
+    if (userId && userId !== authStore.user?.id?.toString()) {
+      watchlist.value = []
+      return
+    }
+    
+    if (!authStore.isAuthenticated) {
+      watchlist.value = []
+      return
+    }
+    
+    const config = {}
+    if (authStore.token) {
+      config.headers = {
+        'Authorization': `Token ${authStore.token}`
+      }
+    }
+    
+    const response = await axios.get(`${API_URL}/watchlists/`, config)
+    watchlist.value = response.data
+  } catch (error) {
+    console.error('위시리스트 로드 실패:', error)
+    watchlist.value = []
+  }
+}
+
+// 위시리스트에서 제거
+const removeFromWatchlist = async (movieId) => {
+  if (!confirm('위시리스트에서 제거하시겠습니까?')) {
+    return
+  }
+  
+  try {
+    await axios.delete(`${API_URL}/watchlists/${movieId}/`, {
+      headers: {
+        'Authorization': `Token ${authStore.token}`
+      }
+    })
+    // 위시리스트 다시 가져오기
+    await fetchWatchlist()
+  } catch (error) {
+    console.error('위시리스트 제거 실패:', error)
+    alert('위시리스트에서 제거하는데 실패했습니다.')
   }
 }
 
@@ -866,10 +1034,112 @@ const goToUserProfile = (userId) => {
 }
 
 onMounted(async () => {
+  // 토큰이 있지만 사용자 정보가 없으면 가져오기
+  if (authStore.token && !authStore.user) {
+    await authStore.fetchUser()
+  }
   await fetchProfile()
   await fetchReviews()
+  await fetchWatchlist()
   await fetchPreferenceReport()
+  
+  // 히트맵 그리드 생성
+  await nextTick()
+  if (heatmapRef.value) {
+    for (let i = 0; i < 100; i++) {
+      const div = document.createElement('div')
+      const randomClass = `c-${Math.floor(Math.random() * 3) + 1}`
+      const activeClass = Math.random() > 0.7 ? 'c-active' : ''
+      div.className = `heatmap-cell ${randomClass} ${activeClass}`
+      heatmapRef.value.appendChild(div)
+    }
+  }
 })
+
+// 프로필 이미지 업로드 관련 함수들
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleImageSelect = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    // 파일 크기 체크 (5MB 제한)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('이미지 크기는 5MB 이하여야 합니다.')
+      return
+    }
+    
+    // 파일 타입 체크
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+    
+    selectedFile.value = file
+    
+    // 미리보기 생성
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      previewImage.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const uploadImage = async () => {
+  if (!selectedFile.value) return
+  
+  isUploading.value = true
+  
+  try {
+    const formData = new FormData()
+    formData.append('profile_image', selectedFile.value)
+    
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Token ${authStore.token}`
+      }
+    }
+    
+    const url = `${API_URL}/accounts/profile/`
+    const response = await axios.patch(url, formData, config)
+    
+    // 프로필 정보 업데이트
+    userProfile.value = response.data
+    
+    // 미리보기 및 선택된 파일 초기화
+    previewImage.value = null
+    selectedFile.value = null
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+    
+    // authStore의 사용자 정보도 업데이트
+    if (authStore.user) {
+      authStore.user.profile_image = response.data.profile_image
+    }
+    
+    // 프로필 정보 다시 가져오기 (이미지 URL 업데이트)
+    await fetchProfile()
+    
+    alert('프로필 이미지가 업로드되었습니다.')
+  } catch (error) {
+    console.error('이미지 업로드 실패:', error)
+    alert('이미지 업로드에 실패했습니다. 다시 시도해주세요.')
+  } finally {
+    isUploading.value = false
+  }
+}
+
+const cancelImageUpload = () => {
+  previewImage.value = null
+  selectedFile.value = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
 </script>
 
 <style scoped>
@@ -877,15 +1147,24 @@ onMounted(async () => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
 }
 
 .profile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid #ddd;
-  margin-bottom: 30px;
+  padding: 20px 40px;
+  z-index: 100;
+  mix-blend-mode: difference;
+  border-bottom: 1px solid #222;
+  margin-bottom: 0;
 }
 
 .header-left {
@@ -895,21 +1174,42 @@ onMounted(async () => {
 }
 
 .logo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: #666;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-size: 1.5rem;
+  cursor: none;
+  color: var(--text-primary);
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
 }
 
-.username {
-  margin: 0;
-  font-size: 28px;
-  font-weight: bold;
+.id-badge {
+  font-family: var(--font-display);
+  font-size: 5rem;
+  text-align: center;
+  -webkit-text-stroke: 1px #333;
+  color: transparent;
+  position: relative;
+  z-index: 2;
+  transition: 0.3s;
+  font-weight: 700;
+  line-height: 0.9;
+}
+
+.id-badge:hover {
+  color: var(--text-primary);
+}
+
+.level-text {
+  font-family: monospace;
+  color: #666;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .header-right {
@@ -919,161 +1219,330 @@ onMounted(async () => {
 
 .btn-nav {
   padding: 10px 20px;
-  border-radius: 20px;
-  border: 1px solid #ddd;
-  background: white;
-  cursor: pointer;
-  font-size: 14px;
+  border-radius: 0;
+  border: 1px solid var(--text-primary);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: none;
+  font-size: 0.9rem;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
   transition: all 0.3s;
 }
 
 .btn-nav:hover {
-  background: #f5f5f5;
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  border-color: var(--accent-acid);
 }
 
 .btn-logout {
-  background: #e74c3c;
-  color: white;
-  border-color: #e74c3c;
+  border-color: var(--accent-acid);
+  color: var(--accent-acid);
 }
 
 .btn-logout:hover {
-  background: #c0392b;
+  background: var(--accent-acid);
+  color: var(--bg-color);
 }
 
 .profile-content {
-  margin-top: 30px;
-}
-
-.profile-info {
+  margin-top: 100px;
+  padding: 60px 40px;
   display: flex;
-  gap: 30px;
-  margin-bottom: 30px;
-}
-
-.profile-image-placeholder {
-  width: 150px;
-  height: 150px;
-  background: #e0e0e0;
-  border-radius: 8px;
-  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  min-height: calc(100vh - 100px);
 }
 
-.profile-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.profile-image-placeholder-text {
-  color: #999;
-  font-size: 12px;
-  text-align: center;
-}
-
-.profile-stats {
+.profile-id-section {
   display: flex;
-  gap: 40px;
+  flex-direction: column;
   align-items: center;
+  gap: 20px;
+  margin-bottom: 50px;
 }
 
-.stat-item {
-  text-align: center;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-}
-
-.stat-item.clickable {
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.stat-item.clickable:hover {
-  transform: translateY(-2px);
-  color: #4a90e2;
-}
-
-.follow-button-container {
+.profile-image-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   margin-top: 20px;
 }
 
-.btn-follow,
-.btn-unfollow {
+.profile-image-placeholder-mini {
+  width: 80px;
+  height: 80px;
+  background: #111;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #333;
+  position: relative;
+}
+
+.profile-image-mini-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.btn-upload-mini,
+.btn-save-mini,
+.btn-cancel-mini {
+  padding: 8px 16px;
+  border-radius: 0;
+  border: 1px solid var(--accent-acid);
+  background: transparent;
+  color: var(--accent-acid);
+  cursor: none;
+  font-size: 0.7rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-upload-mini:hover:not(:disabled),
+.btn-save-mini:hover:not(:disabled) {
+  background: var(--accent-acid);
+  color: var(--bg-color);
+}
+
+.btn-cancel-mini {
+  border-color: #666;
+  color: #666;
+}
+
+.btn-cancel-mini:hover:not(:disabled) {
+  background: #666;
+  color: var(--text-primary);
+}
+
+.upload-actions-mini {
+  display: flex;
+  gap: 10px;
+}
+
+.follow-button-profile {
+  margin-top: 20px;
+}
+
+.btn-follow-profile,
+.btn-unfollow-profile {
   padding: 12px 24px;
-  border-radius: 8px;
-  border: none;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
+  border-radius: 0;
+  border: 1px solid var(--accent-acid);
+  background: transparent;
+  color: var(--accent-acid);
+  font-size: 0.9rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: none;
   transition: all 0.3s;
 }
 
-.btn-follow {
-  background: #4a90e2;
-  color: white;
+.btn-follow-profile:hover:not(:disabled),
+.btn-unfollow-profile:hover:not(:disabled) {
+  background: var(--accent-acid);
+  color: var(--bg-color);
 }
 
-.btn-follow:hover:not(:disabled) {
-  background: #357abd;
-}
-
-.btn-unfollow {
-  background: #95a5a6;
-  color: white;
-}
-
-.btn-unfollow:hover:not(:disabled) {
-  background: #7f8c8d;
-}
-
-.btn-follow:disabled,
-.btn-unfollow:disabled {
-  opacity: 0.6;
+.btn-follow-profile:disabled,
+.btn-unfollow-profile:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.profile-stats-modern {
+  display: flex;
+  gap: 60px;
+  align-items: center;
+  margin-bottom: 50px;
+  padding: 30px 0;
+  border-top: 1px solid #222;
+  border-bottom: 1px solid #222;
+}
+
+.stat-item-modern {
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.stat-item-modern.clickable {
+  cursor: none;
+}
+
+.stat-item-modern.clickable:hover {
+  transform: translateY(-5px);
+}
+
+.stat-item-modern.clickable:hover .stat-value-modern {
+  color: var(--accent-acid);
+}
+
+.stat-label-modern {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.stat-value-modern {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: color 0.3s;
 }
 
 .content-tabs {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 0;
+  margin-bottom: 40px;
+  border-bottom: 1px solid #222;
 }
 
 .tab-btn {
-  padding: 12px 24px;
-  border-radius: 20px;
-  border: 2px solid #333;
-  background: #f0f0f0;
-  cursor: pointer;
-  font-size: 14px;
+  padding: 15px 30px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #666;
+  cursor: none;
+  font-size: 0.9rem;
+  font-family: var(--font-display);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
   transition: all 0.3s;
 }
 
+.tab-btn:hover {
+  color: var(--text-primary);
+  border-bottom-color: #333;
+}
+
 .tab-btn.active {
-  background: #4a90e2;
-  color: white;
-  border-color: #4a90e2;
+  color: var(--accent-acid);
+  border-bottom-color: var(--accent-acid);
 }
 
 .content-area {
   min-height: 400px;
-  background: #f9f9f9;
-  border-radius: 8px;
-  padding: 30px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* Watchlist Section */
+.watchlist-section {
+  width: 100%;
+}
+
+.watchlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.watchlist-card {
+  background: transparent;
+  border-radius: 0;
+  overflow: hidden;
+  cursor: none;
+  transition: all 0.5s;
+  position: relative;
+  border: 1px solid #333;
+}
+
+.watchlist-card:hover {
+  transform: scale(1.05) skewX(-2deg);
+  border-color: var(--accent-acid);
+}
+
+.watchlist-poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  position: relative;
+  overflow: hidden;
+}
+
+.watchlist-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.watchlist-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.watchlist-card:hover .watchlist-overlay {
+  opacity: 1;
+}
+
+.btn-remove-watchlist {
+  background: rgba(204, 255, 0, 0.2);
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  width: 32px;
+  height: 32px;
+  cursor: none;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  color: var(--accent-acid);
+}
+
+.btn-remove-watchlist:hover {
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  transform: scale(1.1);
+}
+
+.watchlist-info {
+  padding: 12px;
+}
+
+.watchlist-title {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlist-year {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.watchlist-rating {
+  font-size: 14px;
+  color: var(--accent-acid);
+  font-weight: bold;
 }
 
 /* Reviews Section */
@@ -1096,16 +1565,19 @@ onMounted(async () => {
 .review-card {
   display: flex;
   gap: 20px;
-  background: white;
+  background: #111;
   padding: 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: 0;
+  border-left: 3px solid var(--accent-acid);
+  cursor: none;
+  transition: all 0.3s;
+  margin-bottom: 20px;
 }
 
 .review-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: #1a1a1a;
+  border-left-color: var(--accent-acid);
+  transform: translateX(5px);
 }
 
 .review-movie-poster {
@@ -1146,7 +1618,7 @@ onMounted(async () => {
 .review-rating {
   font-size: 16px;
   margin-bottom: 10px;
-  color: #f39c12;
+  color: var(--accent-acid);
 }
 
 .review-text {
@@ -1165,41 +1637,65 @@ onMounted(async () => {
 }
 
 .spoiler-badge {
-  background: #e74c3c;
-  color: white;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 11px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
 }
 
 /* Report Section */
 .report-section {
   width: 100%;
+  padding: 40px 0;
 }
 
 .report-empty {
   text-align: center;
   padding: 60px 20px;
+  color: var(--text-primary);
+}
+
+.report-empty p {
+  color: #ffffff;
+  font-size: 20px;
+  margin-bottom: 25px;
+  font-weight: 500;
 }
 
 .btn-generate {
   margin-top: 20px;
-  padding: 12px 24px;
-  background: #4a90e2;
-  color: white;
-  border: none;
-  border-radius: 8px;
+  padding: 15px 30px;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
-  transition: background 0.3s;
+  font-weight: 600;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s;
 }
 
 .btn-generate:hover {
-  background: #357abd;
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  transform: translateY(-2px);
 }
 
 .report-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.report-main-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 30px;
@@ -1210,96 +1706,64 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 40px;
+  padding-bottom: 25px;
+  border-bottom: 2px solid #666;
 }
 
 .report-header-section h3 {
-  margin: 0 0 5px 0;
-  color: #333;
-  font-size: 24px;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+  font-size: 2.5rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 .report-date {
   margin: 0;
-  font-size: 14px;
-  color: #999;
+  font-size: 15px;
+  color: #ddd;
+  font-family: var(--font-tech);
+  font-weight: 500;
 }
 
 .btn-regenerate {
-  padding: 10px 20px;
-  background: #4a90e2;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 2px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .btn-regenerate:hover:not(:disabled) {
-  background: #357abd;
+  background: var(--accent-acid);
+  color: var(--bg-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.3);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.3);
 }
 
 .btn-regenerate:disabled {
-  background: #ccc;
+  background: transparent;
+  color: #666;
+  border-color: #666;
   cursor: not-allowed;
   transform: none;
+  opacity: 0.5;
 }
 
-.report-header-section {
-  grid-column: 1 / -1;
+.report-left {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.report-header-section h3 {
-  margin: 0 0 5px 0;
-  color: #333;
-  font-size: 24px;
-}
-
-.report-date {
-  margin: 0;
-  font-size: 14px;
-  color: #999;
-}
-
-.btn-regenerate {
-  padding: 10px 20px;
-  background: #4a90e2;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-regenerate:hover:not(:disabled) {
-  background: #357abd;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.3);
-}
-
-.btn-regenerate:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.report-left h3 {
-  margin-bottom: 20px;
-  color: #333;
+  flex-direction: column;
 }
 
 .report-list {
@@ -1309,31 +1773,101 @@ onMounted(async () => {
 }
 
 .report-list li {
-  margin-bottom: 15px;
-  padding: 15px;
-  background: white;
-  border-radius: 8px;
-  line-height: 1.8;
+  margin-bottom: 25px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid #666;
+  border-left: 5px solid var(--accent-acid);
+  border-radius: 0;
+  line-height: 2;
+  transition: all 0.3s;
+}
+
+.report-list li:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-left-color: var(--accent-acid);
+  border-color: #777;
+  box-shadow: -5px 0 20px rgba(204, 255, 0, 0.4);
 }
 
 .report-list li strong {
   display: block;
-  margin-bottom: 5px;
-  color: #333;
+  margin-bottom: 20px;
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
 }
 
-.report-list li span {
+.report-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.report-tag {
   display: inline-block;
-  margin-right: 10px;
-  padding: 4px 8px;
-  background: #f0f0f0;
-  border-radius: 4px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid #777;
+  border-radius: 0;
+  font-size: 15px;
+  color: #ffffff;
+  font-family: var(--font-tech);
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.report-tag:hover {
+  border-color: var(--accent-acid);
+  color: var(--accent-acid);
+  background: rgba(204, 255, 0, 0.15);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.tag-value {
+  color: #ddd;
   font-size: 13px;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.report-value {
+  margin-top: 20px;
+  font-size: 2.5rem;
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-shadow: 0 0 15px rgba(204, 255, 0, 0.7);
+  letter-spacing: 2px;
+}
+
+.report-summary-wrapper {
+  margin-top: 20px;
+}
+
+.report-summary-text {
+  margin-top: 20px;
+  padding: 25px;
+  background: rgba(204, 255, 0, 0.12);
+  border: 2px solid rgba(204, 255, 0, 0.5);
+  color: #ffffff;
+  line-height: 2.2;
+  font-family: var(--font-tech);
+  font-size: 16px;
+  font-weight: 500;
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
 }
 
 .report-right {
-  background: white;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid #666;
+  border-radius: 0;
   padding: 30px;
   display: flex;
   align-items: center;
@@ -1343,13 +1877,91 @@ onMounted(async () => {
 
 .report-visualization {
   text-align: center;
-  color: #999;
+  color: #ddd;
+  font-family: var(--font-tech);
+}
+
+.report-visualization p {
+  margin: 10px 0;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .visualization-note {
-  font-size: 12px;
-  margin-top: 10px;
-  color: #bbb;
+  font-size: 14px;
+  margin-top: 15px;
+  color: #aaa;
+  font-style: italic;
+}
+
+.analysis-text {
+  text-align: center;
+  padding: 50px 20px;
+  margin: 50px 0;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  color: #ffffff;
+  border-top: 2px solid #666;
+  border-bottom: 2px solid #666;
+  line-height: 2;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.trait-highlight {
+  color: var(--accent-acid);
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(204, 255, 0, 0.8);
+  font-size: 1.8rem;
+  letter-spacing: 3px;
+}
+
+/* 히트맵 그리드 */
+.profile-heatmap-wrapper {
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 5px;
+  opacity: 0.8;
+  max-width: 400px;
+}
+
+.heatmap-cell {
+  width: 30px;
+  height: 30px;
+  background: #111;
+  transition: 0.2s;
+  cursor: none;
+}
+
+.heatmap-cell:hover {
+  background: var(--accent-acid);
+  transform: scale(1.5);
+  box-shadow: 0 0 10px var(--accent-acid);
+}
+
+.heatmap-cell.c-1 {
+  background: #222;
+}
+
+.heatmap-cell.c-2 {
+  background: #333;
+}
+
+.heatmap-cell.c-3 {
+  background: #444;
+}
+
+.heatmap-cell.c-active {
+  background: var(--accent-acid);
+  opacity: 0.5;
 }
 
 /* 모달 스타일 */

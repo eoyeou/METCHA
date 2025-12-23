@@ -26,17 +26,24 @@
       <!-- 메인 컨텐츠 -->
       <div class="movie-content">
         <!-- 왼쪽: 포스터 -->
-        <div class="movie-poster">
-          <img 
-            :src="movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'" 
-            :alt="movie.title"
-            @error="handleImageError"
-          >
+        <div class="movie-poster-container">
+          <div class="movie-poster-wrapper">
+            <img 
+              :src="movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Image'" 
+              :alt="movie.title"
+              class="movie-poster-img"
+            />
+            <div class="visual-overlay"></div>
+          </div>
+          <h1 class="rotated-title">{{ movie.title.toUpperCase().replace(/\s/g, '_') }}</h1>
         </div>
 
         <!-- 중앙: 영화 정보 -->
         <div class="movie-info">
-          <h1 class="movie-title">{{ movie.title }}</h1>
+          <div class="title-with-badge">
+            <h1 class="movie-title">{{ movie.title }}</h1>
+            <span v-if="isNowPlaying" class="now-playing-badge">NOW_PLAYING</span>
+          </div>
           <p class="original-title" v-if="movie.original_title">
             {{ movie.original_title }}
           </p>
@@ -82,8 +89,28 @@
           </div>
         </div>
 
-        <!-- 오른쪽: 리뷰 작성 버튼 -->
+        <!-- 오른쪽: 리뷰 작성 버튼 및 위시리스트 버튼 -->
         <div class="review-action">
+          <!-- 위시리스트 버튼 (하트) -->
+          <button 
+            v-if="authStore.isAuthenticated"
+            @click="toggleWatchlist" 
+            class="btn-watchlist"
+            :class="{ active: isInWatchlist }"
+            :disabled="isTogglingWatchlist"
+          >
+            <span class="heart-icon">{{ isInWatchlist ? '❤️' : '🤍' }}</span>
+            <span>{{ isInWatchlist ? '위시리스트에서 제거' : '위시리스트에 추가' }}</span>
+          </button>
+          <button 
+            v-else
+            @click="$router.push('/login')" 
+            class="btn-watchlist"
+          >
+            <span class="heart-icon">🤍</span>
+            <span>위시리스트에 추가</span>
+          </button>
+          
           <button 
             v-if="authStore.isAuthenticated"
             @click="toggleReviewForm" 
@@ -156,6 +183,50 @@
         </div>
       </transition>
 
+      <!-- 비슷한 영화 -->
+      <div v-if="similarMovies.length > 0" class="similar-movies-section">
+        <h2>비슷한 영화</h2>
+        <div class="similar-movies-container">
+          <button 
+            @click="scrollSimilarMovies('left')" 
+            class="slider-btn slider-btn-left"
+            :disabled="!canScrollSimilarLeft"
+          >
+            ‹
+          </button>
+          <div 
+            ref="similarMoviesRef"
+            class="similar-movies-slider"
+            @scroll="updateSimilarScrollButtons"
+          >
+            <div
+              v-for="similarMovie in similarMovies"
+              :key="similarMovie.id"
+              @click="goToMovie(similarMovie.id)"
+              class="similar-movie-card"
+            >
+              <img 
+                :src="similarMovie.poster_url || 'https://via.placeholder.com/200x300'" 
+                :alt="similarMovie.title"
+                class="similar-movie-poster"
+              >
+              <div class="similar-movie-info">
+                <h3>{{ similarMovie.title }}</h3>
+                <p class="similar-movie-year">{{ similarMovie.release_year }}</p>
+                <p class="similar-movie-rating">⭐ {{ similarMovie.avg_rating.toFixed(1) }}</p>
+              </div>
+            </div>
+          </div>
+          <button 
+            @click="scrollSimilarMovies('right')" 
+            class="slider-btn slider-btn-right"
+            :disabled="!canScrollSimilarRight"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
       <!-- 리뷰 목록 -->
       <div class="reviews-section">
         <h2>리뷰 {{ movie.reviews.length }}개</h2>
@@ -221,7 +292,11 @@
           </div>
 
           <div class="review-actions">
-            <button class="btn-like">
+            <button 
+              @click="handleLikeReview(review.id)"
+              class="btn-like"
+              :class="{ 'liked': review.is_liked }"
+            >
               <span>👍</span>
               <span>{{ review.likes_count }}</span>
             </button>
@@ -247,7 +322,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMovieStore } from '@/stores/movie'
 import { useAuthStore } from '@/stores/auth'
@@ -267,6 +342,21 @@ if (authStore.token) {
 const movie = computed(() => movieStore.currentMovie)
 const showReviewForm = ref(false)
 const editingReview = ref(null)
+const isInWatchlist = ref(false)
+const isTogglingWatchlist = ref(false)
+const similarMovies = ref([])
+const similarMoviesRef = ref(null)
+const canScrollSimilarLeft = ref(false)
+const canScrollSimilarRight = ref(true)
+
+// 현재 상영작인지 판단 (최근 2년 이내 영화)
+const isNowPlaying = computed(() => {
+  if (!movie.value || !movie.value.release_year) return false
+  const currentYear = new Date().getFullYear()
+  const releaseYear = movie.value.release_year
+  // 현재 년도 또는 최근 2년 이내 영화를 현재 상영작으로 간주
+  return releaseYear >= currentYear - 1 && releaseYear <= currentYear + 1
+})
 
 const newReview = ref({
   rating: 0,
@@ -292,8 +382,182 @@ const loadMovie = async () => {
         console.error('사용자 정보 로드 실패:', error)
       }
     }
+    // 위시리스트 확인
+    if (authStore.isAuthenticated) {
+      await checkWatchlist(movieId)
+    }
+    
+    // 비슷한 영화 가져오기
+    await loadSimilarMovies(movieId)
   } catch (error) {
     console.error('영화 정보 로드 실패:', error)
+  }
+}
+
+// 비슷한 영화 가져오기
+const loadSimilarMovies = async (movieId) => {
+  try {
+    const response = await axios.get(`${API_URL}/movies/${movieId}/similar/`)
+    similarMovies.value = response.data
+    // DOM 업데이트 후 스크롤 버튼 상태 확인
+    await nextTick()
+    updateSimilarScrollButtons()
+  } catch (error) {
+    console.error('비슷한 영화 로드 실패:', error)
+    similarMovies.value = []
+  }
+}
+
+// 비슷한 영화 슬라이더 스크롤
+const scrollSimilarMovies = (direction) => {
+  if (!similarMoviesRef.value) return
+  
+  const scrollAmount = 600
+  const currentScroll = similarMoviesRef.value.scrollLeft
+  
+  if (direction === 'left') {
+    similarMoviesRef.value.scrollTo({
+      left: currentScroll - scrollAmount,
+      behavior: 'smooth'
+    })
+  } else {
+    similarMoviesRef.value.scrollTo({
+      left: currentScroll + scrollAmount,
+      behavior: 'smooth'
+    })
+  }
+}
+
+// 비슷한 영화 스크롤 버튼 상태 업데이트
+const updateSimilarScrollButtons = () => {
+  if (!similarMoviesRef.value) return
+  
+  const { scrollLeft, scrollWidth, clientWidth } = similarMoviesRef.value
+  canScrollSimilarLeft.value = scrollLeft > 0
+  canScrollSimilarRight.value = scrollLeft < scrollWidth - clientWidth - 10
+}
+
+// 영화 상세 페이지로 이동
+const goToMovie = async (movieId) => {
+  // 같은 페이지에 있으면 스크롤을 맨 위로
+  if (route.params.id === movieId.toString()) {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  
+  // 다른 영화로 이동
+  router.push(`/movies/${movieId}`).then(() => {
+    // 페이지 이동 후 데이터 로드
+    loadMovie()
+  })
+}
+
+// 위시리스트 확인
+const checkWatchlist = async (movieId) => {
+  if (!authStore.isAuthenticated || !authStore.token) {
+    isInWatchlist.value = false
+    return
+  }
+  
+  try {
+    const checkUrl = `${API_URL}/watchlists/${movieId}/check/`
+    console.log('위시리스트 확인 URL:', checkUrl)
+    
+    const response = await axios.get(checkUrl, {
+      headers: {
+        'Authorization': `Token ${authStore.token}`
+      }
+    })
+    console.log('위시리스트 확인 응답:', response.data)
+    isInWatchlist.value = response.data.is_in_watchlist
+  } catch (error) {
+    console.error('위시리스트 확인 실패:', error)
+    // 확인 실패 시 기본값으로 false 설정
+    isInWatchlist.value = false
+  }
+}
+
+// 위시리스트 토글
+const toggleWatchlist = async () => {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+  
+  if (!authStore.token) {
+    alert('로그인 토큰이 없습니다. 다시 로그인해주세요.')
+    router.push('/login')
+    return
+  }
+  
+  const movieId = parseInt(route.params.id)
+  console.log('=== 위시리스트 토글 시작 ===')
+  console.log('영화 ID:', movieId)
+  console.log('현재 상태:', isInWatchlist.value ? '위시리스트에 있음' : '위시리스트에 없음')
+  console.log('토큰:', authStore.token ? '있음' : '없음')
+  
+  isTogglingWatchlist.value = true
+  
+  try {
+    if (isInWatchlist.value) {
+      // 위시리스트에서 제거
+      console.log('위시리스트에서 제거 시도...')
+      const deleteUrl = `${API_URL}/watchlists/${movieId}/`
+      console.log('DELETE URL:', deleteUrl)
+      
+      const response = await axios.delete(deleteUrl, {
+        headers: {
+          'Authorization': `Token ${authStore.token}`
+        }
+      })
+      console.log('✅ 제거 성공:', response.status)
+      isInWatchlist.value = false
+      alert('위시리스트에서 제거되었습니다.')
+    } else {
+      // 위시리스트에 추가
+      console.log('위시리스트에 추가 시도...')
+      const postUrl = `${API_URL}/watchlists/`
+      console.log('POST URL:', postUrl)
+      console.log('요청 데이터:', { movie_id: movieId })
+      
+      const response = await axios.post(postUrl, {
+        movie_id: movieId
+      }, {
+        headers: {
+          'Authorization': `Token ${authStore.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      console.log('✅ 추가 성공:', response.status, response.data)
+      isInWatchlist.value = true
+      alert('위시리스트에 추가되었습니다!')
+    }
+    console.log('=== 위시리스트 토글 완료 ===')
+  } catch (error) {
+    console.error('❌ 위시리스트 토글 실패!')
+    console.error('에러 객체:', error)
+    console.error('에러 메시지:', error.message)
+    console.error('에러 코드:', error.code)
+    
+    if (error.response) {
+      console.error('응답 상태:', error.response.status)
+      console.error('응답 데이터:', error.response.data)
+      console.error('응답 헤더:', error.response.headers)
+      
+      const errorMessage = error.response.data?.detail || 
+                          error.response.data?.message || 
+                          `서버 오류 (${error.response.status})`
+      alert(`위시리스트 처리에 실패했습니다.\n\n${errorMessage}`)
+    } else if (error.request) {
+      console.error('요청은 보냈지만 응답이 없음:', error.request)
+      alert('서버에 연결할 수 없습니다. Django 서버가 실행 중인지 확인하세요.')
+    } else {
+      console.error('요청 설정 중 에러:', error.message)
+      alert(`위시리스트 처리에 실패했습니다.\n\n${error.message}`)
+    }
+    console.error('=== 에러 상세 끝 ===')
+  } finally {
+    isTogglingWatchlist.value = false
   }
 }
 
@@ -312,6 +576,16 @@ onMounted(async () => {
     }
   }
   await loadMovie()
+})
+
+// 라우트 파라미터 변경 감지 (같은 컴포넌트 내에서 다른 영화로 이동할 때)
+watch(() => route.params.id, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    // 페이지 맨 위로 스크롤
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // 새로운 영화 데이터 로드
+    await loadMovie()
+  }
 })
 
 const getStars = (rating) => {
@@ -414,6 +688,20 @@ const handleDeleteReview = async (reviewId) => {
     } catch (error) {
       alert('리뷰 삭제에 실패했습니다.')
     }
+  }
+}
+
+const handleLikeReview = async (reviewId) => {
+  if (!authStore.isAuthenticated) {
+    alert('로그인이 필요합니다.')
+    router.push('/login')
+    return
+  }
+  
+  try {
+    await movieStore.toggleReviewLike(reviewId, route.params.id)
+  } catch (error) {
+    alert('좋아요 처리에 실패했습니다.')
   }
 }
 
@@ -536,8 +824,8 @@ const toggleFollow = async (userId, user) => {
 
 .movie-detail-container {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
-  color: #fff;
+  background: var(--bg-color);
+  color: var(--text-primary);
 }
 
 .loading, .error {
@@ -553,7 +841,7 @@ const toggleFollow = async (userId, user) => {
   width: 50px;
   height: 50px;
   border: 5px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #e94560;
+  border-top-color: #666;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -564,31 +852,35 @@ const toggleFollow = async (userId, user) => {
 
 .btn-retry {
   padding: 10px 30px;
-  background: #e94560;
-  color: white;
+  background: var(--accent-acid);
+  color: var(--bg-color);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
+  font-weight: 500;
 }
 
 .movie-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 40px;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
+  z-index: 100;
+  mix-blend-mode: difference;
 }
 
 .logo {
-  font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  background: linear-gradient(45deg, #e94560, #f39c12);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-size: 1.5rem;
+  cursor: none;
+  color: var(--text-primary);
 }
 
 .header-buttons {
@@ -598,53 +890,169 @@ const toggleFollow = async (userId, user) => {
 
 .btn-header {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  color: var(--text-primary);
+  border-radius: 0;
+  cursor: none;
   transition: all 0.3s;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
 }
 
 .btn-header:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  border-color: #555;
 }
 
 .movie-content {
   display: grid;
-  grid-template-columns: 300px 1fr 250px;
-  gap: 40px;
-  padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
+  grid-template-columns: 1fr 2fr;
+  gap: 0;
+  padding: 0;
+  min-height: 100vh;
+  border-bottom: 1px solid #222;
+  position: relative;
 }
 
-.movie-poster img {
+.review-action {
+  grid-column: 2;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  justify-content: center;
+}
+
+.movie-poster-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 60px 40px;
+  background: #000;
+}
+
+.movie-poster-wrapper {
+  position: relative;
   width: 100%;
-  border-radius: 15px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  transition: transform 0.3s;
+  max-width: 500px;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  border: 1px solid #222;
 }
 
-.movie-poster img:hover {
-  transform: scale(1.05);
+.movie-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(30%) contrast(110%);
+  transition: all 0.5s;
+}
+
+.movie-poster-container:hover .movie-poster-img {
+  filter: grayscale(0%) contrast(120%);
+  transform: scale(1.02);
+}
+
+.visual-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    180deg, 
+    rgba(0, 0, 0, 0) 0%, 
+    rgba(0, 0, 0, 0.3) 50%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+.movie-poster-container:hover .visual-overlay {
+  opacity: 0.5;
+}
+
+.rotated-title {
+  position: absolute;
+  bottom: 60px;
+  left: -120px;
+  font-size: 7rem;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.15);
+  opacity: 0.3;
+  transform: rotate(-90deg);
+  transform-origin: left bottom;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  font-stretch: condensed;
+  z-index: 2;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .movie-info {
-  padding: 20px 0;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-left: 1px solid #222;
+  position: relative;
+  background: var(--bg-color);
+}
+
+.title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.now-playing-badge {
+  padding: 8px 16px;
+  border: 1px solid var(--accent-acid);
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.3);
+  white-space: nowrap;
+  font-weight: 600;
 }
 
 .movie-title {
-  font-size: 42px;
-  margin-bottom: 10px;
-  font-weight: bold;
+  font-family: var(--font-display);
+  font-size: 4.5rem;
+  line-height: 0.75;
+  margin-bottom: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  font-stretch: condensed;
+}
+
+.movie-title span {
+  color: var(--accent-acid);
 }
 
 .original-title {
-  color: #aaa;
-  font-size: 18px;
+  color: #888;
+  font-size: 0.9rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
   margin-bottom: 20px;
+  font-family: var(--font-mono);
 }
 
 .rating-info {
@@ -656,7 +1064,7 @@ const toggleFollow = async (userId, user) => {
 }
 
 .stars {
-  color: #f39c12;
+  color: var(--accent-acid);
   font-size: 24px;
 }
 
@@ -670,10 +1078,15 @@ const toggleFollow = async (userId, user) => {
 }
 
 .movie-meta {
+  font-family: 'Courier New', monospace;
+  color: #888;
+  margin-bottom: 40px;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+  padding: 20px 0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
-  margin-bottom: 30px;
 }
 
 .meta-item {
@@ -683,12 +1096,14 @@ const toggleFollow = async (userId, user) => {
 }
 
 .meta-label {
-  color: #aaa;
-  font-size: 14px;
+  color: #888;
+  font-size: 0.9rem;
+  text-transform: uppercase;
 }
 
 .meta-value {
-  font-size: 16px;
+  font-size: 1rem;
+  color: var(--text-primary);
 }
 
 .genre-tags {
@@ -700,10 +1115,37 @@ const toggleFollow = async (userId, user) => {
 
 .genre-tag {
   padding: 8px 16px;
-  background: rgba(233, 69, 96, 0.2);
-  border: 1px solid #e94560;
-  border-radius: 20px;
-  font-size: 14px;
+  background: transparent;
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  font-size: 0.8rem;
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.genre-tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(204, 255, 0, 0.1);
+  transition: left 0.3s;
+  z-index: -1;
+}
+
+.genre-tag:hover {
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.genre-tag:hover::before {
+  left: 0;
 }
 
 .movie-description {
@@ -711,33 +1153,78 @@ const toggleFollow = async (userId, user) => {
 }
 
 .movie-description h3 {
-  font-size: 24px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
   margin-bottom: 15px;
+  text-transform: uppercase;
 }
 
 .movie-description p {
   line-height: 1.8;
-  color: #ddd;
-  font-size: 16px;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-family: var(--font-tech);
 }
 
-.btn-write-review {
+.btn-watchlist {
   width: 100%;
   padding: 20px;
-  background: linear-gradient(135deg, #e94560 0%, #f39c12 100%);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   color: white;
-  border: none;
   border-radius: 12px;
   cursor: pointer;
   font-size: 16px;
   font-weight: bold;
   transition: all 0.3s;
-  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-watchlist:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-watchlist.active {
+  background: rgba(204, 255, 0, 0.2);
+  border-color: #555;
+  color: var(--accent-acid);
+}
+
+.btn-watchlist:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.heart-icon {
+  font-size: 24px;
+}
+
+.btn-write-review {
+  width: 100%;
+  padding: 20px;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
+  border-radius: 0;
+  cursor: none;
+  font-size: 1rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.3s;
 }
 
 .btn-write-review:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(233, 69, 96, 0.6);
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  transform: translateY(-2px);
 }
 
 .btn-write-review.active {
@@ -813,7 +1300,7 @@ const toggleFollow = async (userId, user) => {
 
 .form-group textarea:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: #555;
 }
 
 .char-count {
@@ -853,13 +1340,18 @@ const toggleFollow = async (userId, user) => {
 }
 
 .btn-submit {
-  background: #e94560;
-  color: white;
+  background: transparent;
+  color: var(--accent-acid);
+  border: 1px solid var(--accent-acid);
   flex: 1;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn-submit:hover {
-  background: #d63851;
+  background: var(--accent-acid);
+  color: var(--bg-color);
   transform: translateY(-2px);
 }
 
@@ -870,6 +1362,122 @@ const toggleFollow = async (userId, user) => {
 
 .btn-cancel:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* 비슷한 영화 섹션 */
+.similar-movies-section {
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.similar-movies-section h2 {
+  font-size: 32px;
+  margin-bottom: 30px;
+}
+
+.similar-movies-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.similar-movies-slider {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 10px 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  /* 스크롤바 숨기기 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.similar-movies-slider::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.similar-movie-card {
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 15px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  flex: 0 0 200px;
+  min-width: 200px;
+  max-width: 200px;
+}
+
+.similar-movie-card:hover {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+}
+
+.similar-movie-poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+}
+
+.similar-movie-info {
+  padding: 15px;
+}
+
+.similar-movie-info h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-movie-year {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 5px;
+}
+
+.similar-movie-rating {
+  font-size: 14px;
+  color: #f39c12;
+}
+
+/* 슬라이더 버튼 (비슷한 영화 섹션용) */
+.similar-movies-container .slider-btn {
+  width: 60px;
+  height: 380px; /* 영화 카드 전체 높이: 포스터(300px) + 정보영역(약80px) */
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+}
+
+.similar-movies-container .slider-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #555;
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+.similar-movies-container .slider-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .reviews-section {
@@ -897,19 +1505,18 @@ const toggleFollow = async (userId, user) => {
 }
 
 .review-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  padding: 30px;
+  background: #111;
+  padding: 20px;
   margin-bottom: 20px;
-  border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  border-left: 3px solid var(--accent-acid);
   transition: all 0.3s;
+  box-shadow: -3px 0 10px rgba(204, 255, 0, 0.2);
 }
 
 .review-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  background: #1a1a1a;
+  border-left-color: var(--accent-acid);
 }
 
 .review-header {
@@ -941,14 +1548,14 @@ const toggleFollow = async (userId, user) => {
 }
 
 .review-user.clickable:hover .username {
-  color: #e94560;
+  color: var(--accent-acid);
 }
 
 .user-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: 2px solid #e94560;
+  border: 2px solid #555;
 }
 
 .user-info {
@@ -976,7 +1583,7 @@ const toggleFollow = async (userId, user) => {
 }
 
 .review-rating .stars {
-  color: #f39c12;
+  color: var(--accent-acid);
 }
 
 .review-content {
@@ -1027,25 +1634,29 @@ const toggleFollow = async (userId, user) => {
 }
 
 .btn-follow-review.following:hover {
-  background: #e74c3c;
-  border-color: #e74c3c;
-  color: white;
+  background: var(--accent-acid);
+  border-color: #555;
+  color: var(--bg-color);
 }
 
 .btn-spoiler {
   margin-top: 15px;
   padding: 8px 16px;
-  background: rgba(255, 193, 7, 0.2);
-  border: 1px solid #ffc107;
-  color: #ffc107;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
+  background: transparent;
+  border: 1px solid #555;
+  color: var(--text-primary);
+  border-radius: 0;
+  cursor: none;
+  font-size: 0.8rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 1px;
   transition: all 0.3s;
 }
 
 .btn-spoiler:hover {
-  background: rgba(255, 193, 7, 0.3);
+  background: var(--accent-acid);
+  color: var(--bg-color);
 }
 
 .review-actions {
@@ -1069,22 +1680,26 @@ const toggleFollow = async (userId, user) => {
 }
 
 .btn-like:hover {
-  background: rgba(52, 152, 219, 0.3);
-  border-color: #3498db;
+  background: rgba(204, 255, 0, 0.2);
+  border-color: #555;
+  color: var(--accent-acid);
 }
 
 .btn-edit:hover {
-  background: rgba(243, 156, 18, 0.3);
-  border-color: #f39c12;
+  background: rgba(204, 255, 0, 0.2);
+  border-color: #555;
+  color: var(--accent-acid);
 }
 
 .btn-delete {
-  color: #e74c3c;
-  border-color: #e74c3c;
+  color: #666;
+  border-color: #666;
 }
 
 .btn-delete:hover {
-  background: rgba(231, 76, 60, 0.3);
+  background: rgba(102, 102, 102, 0.3);
+  border-color: #555;
+  color: var(--accent-acid);
 }
 
 .slide-down-enter-active, .slide-down-leave-active {
@@ -1128,6 +1743,22 @@ const toggleFollow = async (userId, user) => {
   
   .movie-title {
     font-size: 28px;
+  }
+  
+  .similar-movies-section {
+    padding: 20px;
+  }
+  
+  .similar-movie-card {
+    flex: 0 0 150px;
+    min-width: 150px;
+    max-width: 150px;
+  }
+  
+  .similar-movies-container .slider-btn {
+    width: 50px;
+    height: 285px; /* 모바일 영화 카드 전체 높이: 포스터(225px) + 정보영역(약60px) */
+    font-size: 35px;
   }
   
   .reviews-section {

@@ -39,6 +39,32 @@ class Review(models.Model):
         self.movie.update_rating()
 
 
+class ReviewLike(models.Model):
+    """리뷰 좋아요 모델"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='review_likes'
+    )
+    review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name='likes'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'review_like'
+        unique_together = ('user', 'review')  # 중복 좋아요 방지
+        indexes = [
+            models.Index(fields=['review', '-created_at']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} likes Review #{self.review.id}"
+
+
 class ReviewEmbedding(models.Model):
     """리뷰 임베딩 모델 (추천 시스템용)"""
     review = models.OneToOneField(

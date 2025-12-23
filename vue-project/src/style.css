@@ -1,79 +1,74 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    --bg-color: #000000;
+    --text-primary: #EAEAEA;
+    --accent-acid: #CCFF00; /* Acid Lime */
+    --accent-blur: rgba(204, 255, 0, 0.15);
+    --font-display: 'Syncopate', sans-serif;
+    --font-tech: 'Space Grotesk', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+    --font-kr: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* [Reset & Base] */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    cursor: none; /* 커서 숨김 */ 
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-.card {
-  padding: 2em;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: var(--font-tech);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1.6;
+    overflow-x: hidden;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+    width: 100vw;
+    min-height: 100vh;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* [Typography Art] */
+.kinetic-type {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 0.75;
+    letter-spacing: -0.03em;
+    word-break: break-all;
+    font-stretch: condensed;
+}
+
+.outline-text {
+    -webkit-text-stroke: 1px var(--text-primary);
+    color: transparent;
+    transition: 0.3s;
+}
+
+.outline-text:hover {
+    color: var(--accent-acid);
+    -webkit-text-stroke: 0px;
+}
+
+/* [Layout Components] */
+.section-container {
+    min-height: 100vh;
+    position: relative;
+    padding: 40px;
+    border-bottom: 1px solid #222;
+}
+
+/* Hover trigger for cursor effects */
+.hover-trigger {
+    transition: 0.3s;
 }
