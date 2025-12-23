@@ -435,6 +435,13 @@ const fetchProfile = async () => {
     const route = router.currentRoute.value
     const userId = route.query.user
     
+    // user_id가 없고 로그인하지 않은 경우 로그인 페이지로 리다이렉트
+    if (!userId && !authStore.isAuthenticated) {
+      alert('로그인이 필요합니다.')
+      router.push('/login')
+      return
+    }
+    
     let url = `${API_URL}/accounts/profile/`
     if (userId) {
       url = `${API_URL}/accounts/profile/${userId}/`
@@ -466,6 +473,12 @@ const fetchProfile = async () => {
   } catch (error) {
     console.error('프로필 정보 로드 실패:', error)
     console.error('에러 상세:', error.response?.data)
+    
+    // 인증 오류인 경우 로그인 페이지로 리다이렉트
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      alert('로그인이 필요합니다.')
+      router.push('/login')
+    }
   }
 }
 
