@@ -247,11 +247,21 @@
                 class="review-user clickable"
                 @click="goToUserProfile(review.user.id)"
               >
-                <img 
-                  :src="review.user.profile_image || 'https://via.placeholder.com/40'" 
-                  alt="프로필"
-                  class="user-avatar"
-                >
+                <div class="user-avatar-wrapper">
+                  <img 
+                    v-if="review.user.profile_image" 
+                    :src="review.user.profile_image" 
+                    alt="프로필"
+                    class="user-avatar"
+                    @error="handleAvatarError"
+                  >
+                  <div 
+                    v-else 
+                    class="user-avatar-default"
+                  >
+                    {{ getAvatarInitial(review.user.username) }}
+                  </div>
+                </div>
                 <div class="user-info">
                   <span class="username">{{ review.user.username }}</span>
                   <span class="review-date">{{ formatDate(review.created_at) }}</span>
@@ -617,6 +627,28 @@ const formatDate = (dateString) => {
 
 const handleImageError = (event) => {
   event.target.src = 'https://via.placeholder.com/300x450?text=No+Image'
+}
+
+// 프로필 아바타 기본 이미지 생성
+const getAvatarInitial = (username) => {
+  if (!username) return '?'
+  // 첫 글자 추출 (한글 또는 영문)
+  const firstChar = username.charAt(0).toUpperCase()
+  return firstChar
+}
+
+// 아바타 이미지 에러 처리
+const handleAvatarError = (event) => {
+  // 이미지 로드 실패 시 기본 아바타로 전환
+  const username = event.target.alt || 'User'
+  const parent = event.target.parentElement
+  if (parent) {
+    event.target.style.display = 'none'
+    const defaultAvatar = document.createElement('div')
+    defaultAvatar.className = 'user-avatar-default'
+    defaultAvatar.textContent = getAvatarInitial(username)
+    parent.appendChild(defaultAvatar)
+  }
 }
 
 const toggleReviewForm = () => {
@@ -1551,11 +1583,33 @@ const toggleFollow = async (userId, user) => {
   color: var(--accent-acid);
 }
 
+.user-avatar-wrapper {
+  position: relative;
+  width: 50px;
+  height: 50px;
+}
+
 .user-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
   border: 2px solid #555;
+  object-fit: cover;
+}
+
+.user-avatar-default {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid #555;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+  text-transform: uppercase;
 }
 
 .user-info {

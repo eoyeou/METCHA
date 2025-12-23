@@ -2072,13 +2072,15 @@ const cancelImageUpload = () => {
 .avatar-placeholder {
   width: 100%;
   height: 100%;
-  background: #4a90e2;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   font-weight: bold;
+  text-transform: uppercase;
+  border-radius: 50%;
 }
 
 .user-info {
