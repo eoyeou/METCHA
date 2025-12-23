@@ -17,6 +17,7 @@ class Review(models.Model):
         validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
     )
     content = models.TextField()
+    original_content = models.TextField(blank=True, help_text="원문 리뷰 (번역 전 내용)")
     likes_count = models.IntegerField(default=0)
     is_spoiler = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
