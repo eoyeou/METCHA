@@ -29,6 +29,18 @@ class Movie(models.Model):
         validators=[MinValueValidator(0.0), MaxValueValidator(5.0)]
     )
     review_count = models.IntegerField(default=0)
+    heaviness = models.IntegerField(
+        null=True, 
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="영화의 무게감 점수 (0-100)"
+    )
+    satisfaction = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="영화의 대중성 점수 (0-100)"
+    )
     genres = models.ManyToManyField(Genre, through='MovieGenre', related_name='movies')
     created_at = models.DateTimeField(auto_now_add=True)
 
