@@ -153,7 +153,7 @@ const displayQuery = computed(() => {
   return searchQuery.value.trim() || routeQuery.value
 })
 
-// 검색 실행
+// 검색 실행 (ChromaDB 기반 의미 검색)
 const performSearch = async () => {
   const query = searchQuery.value.trim()
   if (!query) {
@@ -163,27 +163,16 @@ const performSearch = async () => {
 
   isLoading.value = true
   try {
-    const response = await axios.get(`${API_URL}/movies/`)
-    const movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
-    
-    // 키워드 기반 필터링 (제목, 원제, 설명에서 검색)
-    const keyword = query.toLowerCase()
-    searchResults.value = movies.filter(movie => {
-      const titleMatch = movie.title?.toLowerCase().includes(keyword)
-      const originalTitleMatch = movie.original_title?.toLowerCase().includes(keyword)
-      const descriptionMatch = movie.kor_description?.toLowerCase().includes(keyword) || 
-                              movie.description?.toLowerCase().includes(keyword)
-      
-      return titleMatch || originalTitleMatch || descriptionMatch
+    // ChromaDB 기반 의미 검색 API 호출
+    const response = await axios.post(`${API_URL}/movies/search/semantic/`, {
+      query: query,
+      limit: 20
     })
     
-    // routeQuery 업데이트 (검색 완료 후)
+    searchResults.value = response.data.results || []
     routeQuery.value = query
     
-    // routeQuery 업데이트 (검색 완료 후)
-    routeQuery.value = query
-    
-    // URL 업데이트 (검색어를 쿼리 파라미터로) - 중복 방지를 위해 조건부로만
+    // URL 업데이트 (검색어를 쿼리 파라미터로)
     if (route.query.q !== query) {
       router.push({ 
         path: '/search', 

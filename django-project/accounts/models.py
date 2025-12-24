@@ -7,12 +7,60 @@ class User(AbstractUser):
     profile_image = models.ImageField(upload_to='profiles/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # 사용자 취향 점수 (4~5점 준 영화들의 평균)
+    avg_heaviness = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="사용자 평균 Heaviness 점수 (0-100)"
+    )
+    avg_satisfaction = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="사용자 평균 Satisfaction 점수 (0-100)"
+    )
 
     class Meta:
         db_table = 'user'
 
     def __str__(self):
         return self.username
+    
+    def update_preference_scores(self):
+        """사용자가 4~5점 준 영화들의 평균 Heaviness, Satisfaction 계산"""
+        from reviews.models import Review
+        from movies.models import Movie
+        
+        # 4점 이상 평점을 준 리뷰들
+        high_rated_reviews = Review.objects.filter(
+            user=self,
+            rating__gte=4.0
+        ).select_related('movie')
+        
+        # 해당 영화들의 Heaviness, Satisfaction 수집
+        heaviness_scores = []
+        satisfaction_scores = []
+        
+        for review in high_rated_reviews:
+            movie = review.movie
+            if movie.heaviness is not None:
+                heaviness_scores.append(movie.heaviness)
+            if movie.satisfaction is not None:
+                satisfaction_scores.append(movie.satisfaction)
+        
+        # 평균 계산
+        if heaviness_scores:
+            self.avg_heaviness = sum(heaviness_scores) / len(heaviness_scores)
+        else:
+            self.avg_heaviness = None
+            
+        if satisfaction_scores:
+            self.avg_satisfaction = sum(satisfaction_scores) / len(satisfaction_scores)
+        else:
+            self.avg_satisfaction = None
+        
+        self.save(update_fields=['avg_heaviness', 'avg_satisfaction'])
+        return self.avg_heaviness, self.avg_satisfaction
 
 
 class Follow(models.Model):

@@ -25,7 +25,14 @@ def review_create(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        serializer.save(user=user)
+        review = serializer.save(user=user)
+        
+        # 리뷰 생성 후 사용자 취향 점수 업데이트
+        try:
+            user.update_preference_scores()
+        except Exception as e:
+            print(f"[경고] 사용자 취향 점수 업데이트 실패: {e}")
+        
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -52,6 +59,13 @@ def review_update_or_delete(request, review_pk):
     
     if serializer.is_valid():
         serializer.save()
+        
+        # 리뷰 수정 후 사용자 취향 점수 업데이트
+        try:
+            review.user.update_preference_scores()
+        except Exception as e:
+            print(f"[경고] 사용자 취향 점수 업데이트 실패: {e}")
+        
         return Response(ReviewSerializer(review, context={'request': request}).data)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

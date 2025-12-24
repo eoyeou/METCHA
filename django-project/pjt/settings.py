@@ -41,7 +41,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 INSTALLED_APPS = [
     "accounts",
     "movies",
-    "reviews",
+    "reviews.apps.ReviewsConfig",  # 임베딩 모델 사전 로딩을 위해 명시적 지정
     "watchlists",
     "rest_framework",
     "rest_framework.authtoken",

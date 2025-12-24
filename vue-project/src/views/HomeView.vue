@@ -521,19 +521,17 @@ const handleSearch = () => {
 
   searchTimeout = setTimeout(async () => {
     try {
-      const response = await axios.get(`${API_URL}/movies/`)
-      // REST Framework pagination이 활성화되어 있으면 results를 사용
-      const movies = response.data.results || response.data
+      // ChromaDB 기반 의미 검색 API 호출
+      const response = await axios.post(`${API_URL}/movies/search/semantic/`, {
+        query: searchQuery.value.trim(),
+        limit: 5  // 자동완성은 5개만
+      })
       
-      // 제목으로 필터링 (대소문자 구분 없이)
-      searchResults.value = movies.filter(movie =>
-        movie.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        movie.original_title?.toLowerCase().includes(searchQuery.value.toLowerCase())
-      ).slice(0, 5) // 최대 5개만 표시
-      
+      searchResults.value = response.data.results || []
       showResults.value = true
     } catch (error) {
       console.error('검색 실패:', error)
+      searchResults.value = []
     }
   }, 300)
 }
