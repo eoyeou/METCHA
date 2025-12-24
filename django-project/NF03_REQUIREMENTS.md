@@ -14,14 +14,31 @@
 - **데이터 형식**: Django Model (Movie, Genre)
 
 ### ✅ 2. Load 가능한 Fixture 형태
-- **위치**: `movies/fixtures/movies_initial.json`
-- **포함 데이터**:
-  - 영화 정보 (200개)
-  - 장르 정보 (약 20개)
-- **로드 방법**:
-  ```bash
-  python manage.py loaddata movies/fixtures/movies_initial.json
-  ```
+- **영화 데이터 Fixture**:
+  - **위치**: `movies/fixtures/movies_initial.json`
+  - **포함 데이터**:
+    - 영화 정보 (200개)
+    - 장르 정보 (약 20개)
+  - **로드 방법**:
+    ```bash
+    python manage.py loaddata movies/fixtures/movies_initial.json
+    ```
+
+- **리뷰 데이터 Fixture (테스트용)**:
+  - **위치**: `reviews/fixtures/reviews_sample.json`
+  - **포함 데이터**:
+    - 전체 리뷰 (1,211개)
+    - 리뷰 좋아요 데이터
+  - **파일 크기**: 약 3.1MB
+  - **생성 방법**:
+    ```bash
+    python create_reviews_fixture.py
+    ```
+  - **로드 방법**:
+    ```bash
+    python manage.py loaddata reviews/fixtures/reviews_sample.json
+    ```
+  - **주의**: 영화와 사용자 데이터가 먼저 로드되어야 함
 
 ### ✅ 3. 주기적 업데이트 기능
 - **스크립트**: `load_data.py`
@@ -92,6 +109,7 @@ python load_data.py movies 10
 |------|------|------|
 | 영화 수 | 200개 | 요구사항: 최소 50개 ✅ |
 | 장르 수 | 약 20개 | TMDB 표준 장르 |
+| 리뷰 수 | 1,211개 | 테스트용 fixture 포함 |
 | 데이터 소스 | TMDB API | The Movie Database |
 | 업데이트 기능 | ✅ | 주기적 업데이트 가능 |
 
