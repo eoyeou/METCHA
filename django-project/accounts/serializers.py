@@ -86,11 +86,14 @@ class UserReviewSerializer(serializers.ModelSerializer):
     movie_title = serializers.CharField(source='movie.title', read_only=True)
     movie_poster = serializers.URLField(source='movie.poster_url', read_only=True)
     movie_id = serializers.IntegerField(source='movie.id', read_only=True)
+    movie_heaviness = serializers.IntegerField(source='movie.heaviness', read_only=True, allow_null=True)
+    movie_satisfaction = serializers.IntegerField(source='movie.satisfaction', read_only=True, allow_null=True)
     
     class Meta:
         model = Review
         fields = [
             'id', 'movie_id', 'movie_title', 'movie_poster',
+            'movie_heaviness', 'movie_satisfaction',
             'rating', 'content', 'is_spoiler', 'likes_count',
             'created_at', 'updated_at'
         ]

@@ -268,8 +268,189 @@
               </div>
               <div class="report-right">
                 <div class="report-visualization">
-                  <p>시각화 영역</p>
-                  <p class="visualization-note">(네트워크 그래프 등 추후 구현)</p>
+                  <div v-if="chartData.length === 0" class="chart-empty">
+                    <p>차트 데이터가 없습니다.</p>
+                    <p class="chart-empty-note">리뷰한 영화에 heaviness와 satisfaction 정보가 필요합니다.</p>
+                  </div>
+                  <div v-else class="quadrant-chart-container" ref="chartContainer">
+                    <svg :width="chartSize" :height="chartSize" class="quadrant-chart">
+                      <defs>
+                        <!-- 배경 그라데이션 -->
+                        <linearGradient id="chartBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:rgba(0,0,0,0.5);stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:rgba(20,20,30,0.7);stop-opacity:1" />
+                        </linearGradient>
+                        
+                        <!-- 격자 패턴 -->
+                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(100,100,120,0.2)" stroke-width="0.5"/>
+                        </pattern>
+                        
+                        <!-- 네온 점 효과 (기본) -->
+                        <filter id="neon-point" x="-150%" y="-150%" width="400%" height="400%">
+                          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                          <feOffset in="coloredBlur" dx="0" dy="0" result="offsetBlur"/>
+                          <feFlood flood-color="#6ab7ff" flood-opacity="1"/>
+                          <feComposite in2="offsetBlur" operator="in"/>
+                          <feMerge>
+                            <feMergeNode/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        
+                        <!-- 네온 점 효과 (호버 - 더 강하게) -->
+                        <filter id="neon-point-hover" x="-150%" y="-150%" width="400%" height="400%">
+                          <feGaussianBlur stdDeviation="6" result="coloredBlur1"/>
+                          <feGaussianBlur stdDeviation="3" result="coloredBlur2"/>
+                          <feOffset in="coloredBlur1" dx="0" dy="0" result="offsetBlur1"/>
+                          <feOffset in="coloredBlur2" dx="0" dy="0" result="offsetBlur2"/>
+                          <feFlood flood-color="#8cc8ff" flood-opacity="1"/>
+                          <feComposite in2="offsetBlur1" operator="in" result="glow1"/>
+                          <feFlood flood-color="#6ab7ff" flood-opacity="1"/>
+                          <feComposite in2="offsetBlur2" operator="in" result="glow2"/>
+                          <feMerge>
+                            <feMergeNode in="glow1"/>
+                            <feMergeNode in="glow2"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        
+                        <!-- 평균 점 네온 효과 (빨간색) -->
+                        <filter id="glow-red" x="-150%" y="-150%" width="400%" height="400%">
+                          <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+                          <feOffset in="coloredBlur" dx="0" dy="0" result="offsetBlur"/>
+                          <feFlood flood-color="#ff3232" flood-opacity="1"/>
+                          <feComposite in2="offsetBlur" operator="in"/>
+                          <feMerge>
+                            <feMergeNode/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        
+                      </defs>
+                      
+                      <!-- 배경 -->
+                      <rect width="100%" height="100%" fill="url(#chartBg)" rx="4"/>
+                      <rect width="100%" height="100%" fill="url(#grid)" rx="4"/>
+                      
+                      <!-- 4사분면 배경 (평균 점 위치에 따라 조건부 색상) -->
+                      <rect 
+                        :x="chartSize/2" 
+                        y="0" 
+                        :width="chartSize/2" 
+                        :height="chartSize/2" 
+                        :fill="quadrantColors.q1" 
+                        rx="2"
+                        class="quadrant-bg"
+                      />
+                      <rect 
+                        x="0" 
+                        y="0" 
+                        :width="chartSize/2" 
+                        :height="chartSize/2" 
+                        :fill="quadrantColors.q2" 
+                        rx="2"
+                        class="quadrant-bg"
+                      />
+                      <rect 
+                        x="0" 
+                        :y="chartSize/2" 
+                        :width="chartSize/2" 
+                        :height="chartSize/2" 
+                        :fill="quadrantColors.q3" 
+                        rx="2"
+                        class="quadrant-bg"
+                      />
+                      <rect 
+                        :x="chartSize/2" 
+                        :y="chartSize/2" 
+                        :width="chartSize/2" 
+                        :height="chartSize/2" 
+                        :fill="quadrantColors.q4" 
+                        rx="2"
+                        class="quadrant-bg"
+                      />
+                      
+                      <!-- 중심선 -->
+                      <line :x1="chartSize/2" y1="0" :x2="chartSize/2" :y2="chartSize" stroke="rgba(204,255,0,0.4)" stroke-width="2" stroke-dasharray="5,5"/>
+                      <line x1="0" :y1="chartSize/2" :x2="chartSize" :y2="chartSize/2" stroke="rgba(204,255,0,0.4)" stroke-width="2" stroke-dasharray="5,5"/>
+                      
+                      <!-- 축 레이블 -->
+                      <text :x="chartSize/2" y="18" text-anchor="middle" fill="#ccc" font-size="13" font-weight="600" font-family="var(--font-tech)">대중성</text>
+                      <text x="15" :y="chartSize/2" text-anchor="start" fill="#ccc" font-size="13" font-weight="600" font-family="var(--font-tech)" transform="rotate(-90, 15, 200)">무게감</text>
+                      
+                      <!-- 축 눈금 및 숫자 -->
+                      <g class="axis-labels">
+                        <text :x="10" :y="chartSize/2 + 4" fill="#888" font-size="11" font-family="var(--font-tech)">0</text>
+                        <text :x="chartSize - 10" :y="chartSize/2 + 4" fill="#888" font-size="11" text-anchor="end" font-family="var(--font-tech)">100</text>
+                        <text :x="chartSize/2 + 5" :y="18" fill="#888" font-size="11" font-family="var(--font-tech)">100</text>
+                        <text :x="chartSize/2 + 5" :y="chartSize - 5" fill="#888" font-size="11" font-family="var(--font-tech)">0</text>
+                      </g>
+                      
+                      <!-- 4사분면 라벨 (모서리에 배치) -->
+                      <g class="quadrant-labels">
+                        <text x="20" y="30" text-anchor="start" fill="rgba(100,150,255,0.8)" font-size="13" font-weight="700" font-family="var(--font-display)">팝콘 무비</text>
+                        <text :x="chartSize - 20" y="30" text-anchor="end" fill="rgba(204,255,0,0.9)" font-size="13" font-weight="700" font-family="var(--font-display)">마스터피스</text>
+                        <text x="20" :y="chartSize - 20" text-anchor="start" fill="rgba(150,100,255,0.8)" font-size="13" font-weight="700" font-family="var(--font-display)">매니악</text>
+                        <text :x="chartSize - 20" :y="chartSize - 20" text-anchor="end" fill="rgba(255,150,100,0.8)" font-size="13" font-weight="700" font-family="var(--font-display)">시네필</text>
+                      </g>
+                      
+                      <!-- 영화 점들 -->
+                      <circle
+                        v-for="(review, index) in chartData"
+                        :key="review.id || index"
+                        :cx="getX(review.satisfaction)"
+                        :cy="getY(review.heaviness)"
+                        r="5"
+                        fill="#6ab7ff"
+                        stroke="none"
+                        filter="url(#neon-point)"
+                        @mouseenter="showTooltip($event, review)"
+                        @mouseleave="hideTooltip"
+                        class="movie-point"
+                      />
+                      
+                      <!-- 평균 점 (빨간색, 더 눈에 띄게) -->
+                      <g v-if="averagePoint">
+                        <circle
+                          :cx="getX(averagePoint.satisfaction)"
+                          :cy="getY(averagePoint.heaviness)"
+                          r="10"
+                          fill="rgba(255,50,50,0.3)"
+                          class="average-point-glow"
+                        />
+                        <circle
+                          :cx="getX(averagePoint.satisfaction)"
+                          :cy="getY(averagePoint.heaviness)"
+                          r="8"
+                          fill="#ff3232"
+                          stroke="none"
+                          filter="url(#glow-red)"
+                          class="average-point"
+                        />
+                        <text
+                          :x="getX(averagePoint.satisfaction)"
+                          :y="getY(averagePoint.heaviness) - 15"
+                          text-anchor="middle"
+                          fill="#ff3232"
+                          font-size="11"
+                          font-weight="700"
+                          font-family="var(--font-tech)"
+                        >
+                          
+                        </text>
+                      </g>
+                    </svg>
+                    
+                    <!-- 툴팁 -->
+                    <div v-if="tooltip.show" class="chart-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
+                      <img v-if="tooltip.data?.movie_poster" :src="tooltip.data.movie_poster" alt="Poster" class="tooltip-poster"/>
+                      <div class="tooltip-content">
+                        <div class="tooltip-title">{{ tooltip.data?.movie_title }}</div>
+                        <div class="tooltip-rating">⭐ {{ tooltip.data?.rating }}점</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -414,6 +595,16 @@ const previewImage = ref(null)
 const selectedFile = ref(null)
 const isUploading = ref(false)
 const heatmapRef = ref(null)
+const chartContainer = ref(null)
+
+// 차트 설정
+const chartSize = 400
+const tooltip = ref({
+  show: false,
+  x: 0,
+  y: 0,
+  data: null
+})
 
 // 본인 프로필인지 확인하는 computed
 const isOwnProfile = computed(() => {
@@ -495,6 +686,17 @@ const fetchReviews = async () => {
     
     const response = await axios.get(url)
     reviews.value = response.data
+    console.log('[리뷰] 가져온 리뷰 수:', reviews.value.length)
+    if (reviews.value.length > 0) {
+      console.log('[리뷰] 첫 번째 리뷰 전체 데이터:', reviews.value[0])
+      console.log('[리뷰] 첫 번째 리뷰 샘플:', {
+        movie_title: reviews.value[0].movie_title,
+        movie_heaviness: reviews.value[0].movie_heaviness,
+        movie_satisfaction: reviews.value[0].movie_satisfaction,
+        'has movie_heaviness': 'movie_heaviness' in reviews.value[0],
+        'has movie_satisfaction': 'movie_satisfaction' in reviews.value[0]
+      })
+    }
   } catch (error) {
     console.error('리뷰 목록 로드 실패:', error)
   }
@@ -677,6 +879,159 @@ const regenerateReport = async () => {
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   return date.toLocaleDateString('ko-KR')
+}
+
+// 차트 데이터 (heaviness, satisfaction가 있는 리뷰만)
+const chartData = computed(() => {
+  if (!reviews.value || reviews.value.length === 0) {
+    console.log('[차트] 리뷰 데이터가 없습니다')
+    return []
+  }
+  
+  console.log('[차트] 전체 리뷰 수:', reviews.value.length)
+  console.log('[차트] 첫 번째 리뷰 키들:', reviews.value.length > 0 ? Object.keys(reviews.value[0]) : '없음')
+  
+  const filtered = reviews.value.filter(review => {
+    // movie_heaviness와 movie_satisfaction 필드 확인
+    const heaviness = review.movie_heaviness
+    const satisfaction = review.movie_satisfaction
+    
+    const hasHeaviness = heaviness !== null && heaviness !== undefined && heaviness !== ''
+    const hasSatisfaction = satisfaction !== null && satisfaction !== undefined && satisfaction !== ''
+    
+    if (!hasHeaviness || !hasSatisfaction) {
+      console.log('[차트] 필터링 제외:', {
+        title: review.movie_title,
+        heaviness: heaviness,
+        satisfaction: satisfaction
+      })
+    }
+    
+    return hasHeaviness && hasSatisfaction
+  })
+  
+  console.log('[차트] 필터링된 리뷰 수:', filtered.length)
+  if (filtered.length > 0) {
+    console.log('[차트] 첫 번째 필터링된 리뷰:', {
+      title: filtered[0].movie_title,
+      heaviness: filtered[0].movie_heaviness,
+      satisfaction: filtered[0].movie_satisfaction
+    })
+  } else {
+    console.log('[차트] 필터링된 리뷰가 없습니다. 모든 리뷰의 필드 값:')
+    reviews.value.slice(0, 3).forEach((review, idx) => {
+      console.log(`  [${idx}] ${review.movie_title}: heaviness=${review.movie_heaviness}, satisfaction=${review.movie_satisfaction}`)
+    })
+  }
+  
+  return filtered.map(review => ({
+    id: review.id,
+    movie_title: review.movie_title,
+    movie_poster: review.movie_poster,
+    rating: review.rating,
+    heaviness: Number(review.movie_heaviness),
+    satisfaction: Number(review.movie_satisfaction)
+  }))
+})
+
+// 평균 점 계산
+const averagePoint = computed(() => {
+  if (!chartData.value || chartData.value.length === 0) {
+    return null
+  }
+  const sum = chartData.value.reduce((acc, review) => ({
+    heaviness: acc.heaviness + review.heaviness,
+    satisfaction: acc.satisfaction + review.satisfaction
+  }), { heaviness: 0, satisfaction: 0 })
+  
+  return {
+    heaviness: Math.round(sum.heaviness / chartData.value.length),
+    satisfaction: Math.round(sum.satisfaction / chartData.value.length)
+  }
+})
+
+// 각 사분면의 배경색 계산 (평균 점이 있는 사분면만 라임색 반투명 적용)
+const quadrantColors = computed(() => {
+  const limeColor = 'rgba(204, 255, 0, 0.2)' // 라임색 반투명
+  const transparent = 'transparent'
+  
+  if (!averagePoint.value) {
+    return {
+      q1: transparent, // 오른쪽 위 (마스터피스)
+      q2: transparent, // 왼쪽 위 (팝콘 무비)
+      q3: transparent, // 왼쪽 아래 (매니악)
+      q4: transparent // 오른쪽 아래 (시네필)
+    }
+  }
+  
+  const satisfaction = averagePoint.value.satisfaction // 0-100, 오른쪽이 높음
+  const heaviness = averagePoint.value.heaviness // 0-100, 위가 높음 (getY에서 뒤집어짐)
+  
+  // 사분면 판단 (satisfaction: x축, heaviness: y축)
+  // Q1: 오른쪽 위 (마스터피스) - satisfaction >= 50, heaviness >= 50
+  // Q2: 왼쪽 위 (팝콘 무비) - satisfaction < 50, heaviness >= 50
+  // Q3: 왼쪽 아래 (매니악) - satisfaction < 50, heaviness < 50
+  // Q4: 오른쪽 아래 (시네필) - satisfaction >= 50, heaviness < 50
+  
+  const isQ1 = satisfaction >= 50 && heaviness >= 50 // 오른쪽 위 (마스터피스)
+  const isQ2 = satisfaction < 50 && heaviness >= 50 // 왼쪽 위 (팝콘 무비)
+  const isQ3 = satisfaction < 50 && heaviness < 50 // 왼쪽 아래 (매니악)
+  const isQ4 = satisfaction >= 50 && heaviness < 50 // 오른쪽 아래 (시네필)
+  
+  // 평균 점이 있는 사분면만 라임색 반투명 적용
+  return {
+    q1: isQ1 ? limeColor : transparent,
+    q2: isQ2 ? limeColor : transparent,
+    q3: isQ3 ? limeColor : transparent,
+    q4: isQ4 ? limeColor : transparent
+  }
+})
+
+// X 좌표 변환 (satisfaction: 0-100 -> x: 0-chartSize)
+const getX = (satisfaction) => {
+  if (satisfaction === null || satisfaction === undefined) return 0
+  return (satisfaction / 100) * chartSize
+}
+
+// Y 좌표 변환 (heaviness: 0-100 -> y: chartSize-0, 뒤집어서 위가 100이 되도록)
+const getY = (heaviness) => {
+  if (heaviness === null || heaviness === undefined) return 0
+  return chartSize - (heaviness / 100) * chartSize
+}
+
+// 툴팁 표시
+const showTooltip = (event, review) => {
+  if (!chartContainer.value) return
+  
+  const rect = chartContainer.value.getBoundingClientRect()
+  const mouseX = event.clientX - rect.left
+  const mouseY = event.clientY - rect.top
+  
+  // 툴팁을 마우스 오른쪽/아래에 배치하되, 경계를 벗어나지 않도록
+  let tooltipX = mouseX + 15
+  let tooltipY = mouseY - 10
+  
+  // 오른쪽 경계 체크
+  if (tooltipX + 220 > rect.width) {
+    tooltipX = mouseX - 230 // 왼쪽에 배치
+  }
+  
+  // 아래 경계 체크
+  if (tooltipY + 110 > rect.height) {
+    tooltipY = mouseY - 100 // 위에 배치
+  }
+  
+  tooltip.value = {
+    show: true,
+    x: tooltipX,
+    y: tooltipY,
+    data: review
+  }
+}
+
+// 툴팁 숨기기
+const hideTooltip = () => {
+  tooltip.value.show = false
 }
 
 // 영화 상세 페이지로 이동
@@ -1892,6 +2247,7 @@ const cancelImageUpload = () => {
   text-align: center;
   color: #ddd;
   font-family: var(--font-tech);
+  width: 100%;
 }
 
 .report-visualization p {
@@ -1904,6 +2260,199 @@ const cancelImageUpload = () => {
   font-size: 14px;
   margin-top: 15px;
   color: #aaa;
+  font-style: italic;
+}
+
+/* 4사분면 차트 스타일 */
+.quadrant-chart-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.quadrant-chart {
+  border: 2px solid rgba(204,255,0,0.3);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 30px rgba(204,255,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.quadrant-chart:hover {
+  border-color: rgba(204,255,0,0.5);
+  box-shadow: 0 4px 25px rgba(0,0,0,0.6), 0 0 40px rgba(204,255,0,0.2);
+}
+
+.movie-point {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: url(#neon-point);
+  fill: #6ab7ff;
+}
+
+.movie-point:hover {
+  r: 7;
+  fill: #8cc8ff;
+  filter: url(#neon-point-hover);
+  transform-origin: center;
+  animation: neon-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes neon-pulse {
+  0%, 100% {
+    fill: #8cc8ff;
+    filter: url(#neon-point-hover);
+  }
+  50% {
+    fill: #a0d4ff;
+    filter: url(#neon-point-hover);
+  }
+}
+
+.average-point {
+  cursor: default;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.average-point-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    r: 8;
+    opacity: 1;
+  }
+  50% {
+    r: 9;
+    opacity: 0.9;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    r: 10;
+    opacity: 0.3;
+  }
+  50% {
+    r: 12;
+    opacity: 0.5;
+  }
+}
+
+.axis-labels text {
+  transition: fill 0.2s;
+}
+
+.axis-labels:hover text {
+  fill: var(--accent-acid);
+}
+
+.quadrant-labels text {
+  text-shadow: 0 0 10px rgba(204,255,0,0.5);
+  transition: all 0.3s;
+}
+
+.quadrant-labels text:hover {
+  font-size: 14px;
+  filter: brightness(1.2);
+}
+
+.quadrant-bg {
+  transition: fill 0.5s ease-in-out;
+}
+
+.chart-tooltip {
+  position: absolute;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(20, 20, 30, 0.98) 100%);
+  border: 2px solid var(--accent-acid);
+  padding: 15px;
+  border-radius: 8px;
+  z-index: 1000;
+  pointer-events: none;
+  min-width: 200px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(204,255,0,0.3);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip-poster {
+  width: 60px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 2px solid rgba(204,255,0,0.5);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  transition: transform 0.2s;
+}
+
+.tooltip-content {
+  flex: 1;
+}
+
+.tooltip-title {
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 8px;
+  font-family: var(--font-tech);
+  text-shadow: 0 0 5px rgba(0,0,0,0.8);
+}
+
+.tooltip-rating {
+  color: var(--accent-acid);
+  font-size: 16px;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(204,255,0,0.5);
+}
+
+.chart-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+}
+
+.chart-empty p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.chart-empty-note {
+  font-size: 14px;
+  color: #888;
+  font-style: italic;
+}
+
+.chart-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #aaa;
+}
+
+.chart-empty p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.chart-empty-note {
+  font-size: 14px;
+  color: #888;
   font-style: italic;
 }
 
