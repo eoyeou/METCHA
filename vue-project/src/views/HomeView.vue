@@ -3,7 +3,7 @@
     <!-- 헤더 -->
     <header class="home-header">
       <div class="header-top">
-        <div class="logo" @click="goToHome">FLUX.</div>
+        <div class="logo" @click="goToHome">METCHA</div>
         <div class="header-buttons" v-if="authStore.isAuthenticated">
           <button @click="goToProfile" class="btn-header">내 프로필</button>
           <button @click="goToPreference" class="btn-header">리뷰작성</button>
