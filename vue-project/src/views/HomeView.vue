@@ -653,10 +653,10 @@ onMounted(() => {
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 100;
-  mix-blend-mode: difference;
+  z-index: 1000;
   background: var(--bg-color);
   border-bottom: 1px solid #222;
+  backdrop-filter: blur(10px);
 }
 
 .header-top {
@@ -729,7 +729,7 @@ onMounted(() => {
   max-width: 100%;
   margin: 0;
   padding: 40px 40px 60px;
-  margin-top: 150px; /* 헤더 높이만큼 여백 */
+  margin-top: 180px; /* 헤더 높이만큼 여백 (더 여유있게) */
 }
 
 .search-box {
@@ -1198,6 +1198,12 @@ onMounted(() => {
 @media (max-width: 768px) {
   .main-content {
     padding: 40px 20px;
+    margin-top: 160px; /* 모바일 헤더 높이만큼 여백 */
+  }
+  
+  .home-header {
+    background: var(--bg-color);
+    border-bottom: 1px solid #222;
   }
 
   .search-section {
