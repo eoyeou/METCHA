@@ -190,6 +190,7 @@ const handleRegister = async () => {
   width: 100%;
   max-width: 600px;
   border: 1px solid #222;
+  box-sizing: border-box;
 }
 
 h2 {
@@ -214,12 +215,15 @@ h2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+  width: 100%;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
+  width: 100%;
 }
 
 label {
@@ -241,6 +245,8 @@ input {
   font-size: 1.2rem;
   font-family: var(--font-tech);
   transition: all 0.3s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 input:focus {
