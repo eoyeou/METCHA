@@ -2541,14 +2541,16 @@ const cancelImageUpload = () => {
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
+  background: var(--bg-color);
+  border: 1px solid #222;
+  border-radius: 0;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
 }
 
 .modal-header {
@@ -2556,12 +2558,17 @@ const cancelImageUpload = () => {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #222;
 }
 
 .modal-header h3 {
   margin: 0;
   font-size: 20px;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .modal-close {
@@ -2569,20 +2576,21 @@ const cancelImageUpload = () => {
   border: none;
   font-size: 28px;
   cursor: pointer;
-  color: #999;
+  color: #888;
   padding: 0;
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 0;
   transition: all 0.3s;
+  font-family: var(--font-display);
 }
 
 .modal-close:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
 }
 
 .modal-body {
@@ -2594,7 +2602,8 @@ const cancelImageUpload = () => {
 .empty-list {
   text-align: center;
   padding: 40px 20px;
-  color: #999;
+  color: #666;
+  font-family: var(--font-tech);
 }
 
 .user-list {
@@ -2608,13 +2617,15 @@ const cancelImageUpload = () => {
   align-items: center;
   gap: 15px;
   padding: 15px;
-  border-radius: 8px;
+  border-radius: 0;
+  border-bottom: 1px solid #222;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .user-item:hover {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom-color: #333;
 }
 
 .user-avatar {
@@ -2652,39 +2663,52 @@ const cancelImageUpload = () => {
 .user-name {
   font-weight: 500;
   margin-bottom: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 1rem;
 }
 
 .user-stats {
   font-size: 14px;
-  color: #999;
+  color: #666;
+  font-family: var(--font-tech);
 }
 
 .btn-follow-small,
 .btn-unfollow-small {
   padding: 8px 16px;
-  border-radius: 6px;
-  border: none;
-  font-size: 14px;
+  border-radius: 0;
+  border: 1px solid;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn-follow-small {
-  background: #4a90e2;
-  color: white;
+  background: transparent;
+  color: var(--accent-acid);
+  border-color: var(--accent-acid);
 }
 
 .btn-follow-small:hover {
-  background: #357abd;
+  background: var(--accent-acid);
+  color: var(--bg-color);
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.3);
 }
 
 .btn-unfollow-small {
-  background: #e0e0e0;
-  color: #333;
+  background: transparent;
+  color: #888;
+  border-color: #333;
 }
 
 .btn-unfollow-small:hover {
-  background: #d0d0d0;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: #555;
 }
 </style>
