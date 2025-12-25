@@ -161,6 +161,42 @@ def preference_report(request, user_id=None):
         avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0.0
         print(f"[취향 리포트 생성] 평균 별점: {avg_rating}")
         
+        # 평점 분포 계산 (1점~5점 각각의 개수와 비율)
+        rating_distribution = {}
+        for i in range(1, 6):
+            count = reviews.filter(rating=i).count()
+            percentage = round((count / total_reviews) * 100, 1) if total_reviews > 0 else 0
+            rating_distribution[str(i)] = {
+                'count': count,
+                'percentage': percentage
+            }
+        
+        # 평점 분포 요약 (고평점 vs 저평점)
+        high_rating_count = reviews.filter(rating__gte=4.0).count()
+        mid_rating_count = reviews.filter(rating__gte=3.0, rating__lt=4.0).count()
+        low_rating_count = reviews.filter(rating__lt=3.0).count()
+        
+        rating_summary = {
+            'high_rating': {
+                'count': high_rating_count,
+                'percentage': round((high_rating_count / total_reviews) * 100, 1) if total_reviews > 0 else 0,
+                'label': '고평점 (4.0점 이상)'
+            },
+            'mid_rating': {
+                'count': mid_rating_count,
+                'percentage': round((mid_rating_count / total_reviews) * 100, 1) if total_reviews > 0 else 0,
+                'label': '중평점 (3.0~3.9점)'
+            },
+            'low_rating': {
+                'count': low_rating_count,
+                'percentage': round((low_rating_count / total_reviews) * 100, 1) if total_reviews > 0 else 0,
+                'label': '저평점 (3.0점 미만)'
+            }
+        }
+        
+        print(f"[취향 리포트 생성] 평점 분포: {rating_distribution}")
+        print(f"[취향 리포트 생성] 평점 요약: {rating_summary}")
+        
         # 감독 선호도
         director_counts = {}
         for review in reviews:
@@ -184,6 +220,8 @@ def preference_report(request, user_id=None):
         mood_analysis = {
             '평균 평점': round(avg_rating, 1),
             '총 리뷰 수': total_reviews,
+            '평점 분포': rating_distribution,
+            '평점 요약': rating_summary,
         }
         print(f"[취향 리포트 생성] 무드 분석: {mood_analysis}")
         

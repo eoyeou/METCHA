@@ -239,18 +239,23 @@ const handleLogout = async () => {
 <style scoped>
 .search-results-page {
   min-height: 100vh;
-  background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
+  background: #000;
   color: #fff;
 }
 
 .search-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 40px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-color);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #222;
+  z-index: 1000;
 }
 
 .header-left {
@@ -265,8 +270,9 @@ const handleLogout = async () => {
   font-weight: 700;
   letter-spacing: -2px;
   font-size: 1.5rem;
-  cursor: none;
+  cursor: pointer;
   color: var(--text-primary);
+  text-transform: uppercase;
 }
 
 .search-box-container {
@@ -276,37 +282,44 @@ const handleLogout = async () => {
 
 .search-box {
   display: flex;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  align-items: center;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+  border: none;
+  border-bottom: 2px solid #333;
   transition: all 0.3s;
 }
 
 .search-box:focus-within {
-  border-color: #555;
-  box-shadow: 0 0 20px rgba(204, 255, 0, 0.3);
+  border-bottom-color: var(--accent-acid);
 }
 
 .search-input {
   flex: 1;
-  padding: 15px 25px;
+  padding: 15px 0;
   background: transparent;
   border: none;
-  color: white;
-  font-size: 16px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-weight: 300;
+  letter-spacing: 0.05em;
   outline: none;
+  text-align: left;
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: #333;
+  -webkit-text-stroke: 1px #333;
+  color: transparent;
 }
 
 .search-btn {
   padding: 15px 0 15px 20px;
   background: transparent;
   border: none;
-  cursor: none;
+  cursor: pointer;
   color: var(--text-primary);
   transition: all 0.3s;
   opacity: 0.4;
@@ -342,33 +355,41 @@ const handleLogout = async () => {
 
 .btn-nav {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 8px;
+  background: transparent;
+  border: 1px solid #333;
+  color: var(--text-primary);
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.3s;
   font-size: 14px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btn-nav:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent-acid);
+  color: var(--accent-acid);
 }
 
 .btn-logout {
-  background: rgba(231, 76, 60, 0.3);
-  border-color: rgba(231, 76, 60, 0.5);
+  background: transparent;
+  border-color: #666;
+  color: #666;
 }
 
 .btn-logout:hover {
-  background: rgba(231, 76, 60, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #999;
+  color: #999;
 }
 
 .search-content {
   max-width: 1400px;
   margin: 0 auto;
   padding: 60px 40px;
+  padding-top: 180px;
 }
 
 .empty-search {
@@ -377,13 +398,19 @@ const handleLogout = async () => {
 }
 
 .empty-search h2 {
-  font-size: 32px;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
   margin-bottom: 15px;
+  color: var(--text-primary);
 }
 
 .empty-search p {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-kr);
+  color: #aaa;
 }
 
 .results-section {
@@ -395,21 +422,29 @@ const handleLogout = async () => {
 }
 
 .results-header h2 {
-  font-size: 32px;
-  font-weight: bold;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+  line-height: 0.75;
+  font-stretch: condensed;
 }
 
 .loading-state,
 .no-results {
   text-align: center;
   padding: 100px 20px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #aaa;
+  font-family: var(--font-kr);
 }
 
 .no-results-hint {
   margin-top: 10px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
+  color: #666;
+  font-family: var(--font-mono);
 }
 
 .movies-grid {
@@ -421,17 +456,18 @@ const handleLogout = async () => {
 
 .movie-card {
   cursor: pointer;
-  transition: all 0.3s;
-  border-radius: 15px;
+  transition: all 0.5s;
+  border-radius: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  border: 1px solid #333;
+  position: relative;
 }
 
 .movie-card:hover {
-  transform: translateY(-10px) scale(1.05);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
-  border-color: #555;
+  transform: scale(1.05) skewX(-2deg);
+  border-color: var(--accent-acid);
+  box-shadow: 0 0 15px rgba(204, 255, 0, 0.3);
 }
 
 .movie-poster-wrapper {
@@ -446,6 +482,13 @@ const handleLogout = async () => {
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: grayscale(30%) contrast(110%);
+  transition: 0.5s;
+}
+
+.movie-card:hover .movie-poster {
+  filter: grayscale(0%) contrast(120%);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
 }
 
 .movie-info {
@@ -453,12 +496,15 @@ const handleLogout = async () => {
 }
 
 .movie-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 5px;
+  font-size: 14px;
+  font-family: var(--font-kr);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
 }
 
 .movie-original-title {
@@ -479,12 +525,18 @@ const handleLogout = async () => {
 }
 
 .movie-year {
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  color: #aaa;
+  margin-bottom: 5px;
 }
 
 .movie-rating {
-  color: #f39c12;
-  font-weight: bold;
+  font-size: 14px;
+  color: var(--accent-acid);
+  font-weight: 500;
 }
 
 .movie-genres {
@@ -496,11 +548,14 @@ const handleLogout = async () => {
 
 .genre-tag {
   padding: 3px 8px;
-  background: rgba(204, 255, 0, 0.1);
+  background: transparent;
   border: 1px solid var(--accent-acid);
-  border-radius: 12px;
+  border-radius: 0;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-mono);
+  color: var(--accent-acid);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* 반응형 */
@@ -529,6 +584,7 @@ const handleLogout = async () => {
 
   .search-content {
     padding: 40px 20px;
+    padding-top: 160px;
   }
 
   .movies-grid {
@@ -537,7 +593,7 @@ const handleLogout = async () => {
   }
 
   .results-header h2 {
-    font-size: 24px;
+    font-size: 1.8rem;
   }
 }
 </style>

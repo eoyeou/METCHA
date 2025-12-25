@@ -248,6 +248,38 @@
                     <strong>평균 별점</strong>
                     <div class="report-value">{{ preferenceReport.mood_analysis['평균 평점'] }}점</div>
                   </li>
+                  <li v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평점 분포']">
+                    <strong>평점 분포</strong>
+                    <div class="rating-distribution">
+                      <div 
+                        v-for="(data, rating) in preferenceReport.mood_analysis['평점 분포']" 
+                        :key="rating"
+                        class="rating-bar-item"
+                      >
+                        <div class="rating-label">{{ rating }}점</div>
+                        <div class="rating-bar-container">
+                          <div 
+                            class="rating-bar" 
+                            :style="{ width: data.percentage + '%' }"
+                          ></div>
+                          <span class="rating-count">{{ data.count }}개 ({{ data.percentage }}%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평점 요약']">
+                    <strong>평점 요약</strong>
+                    <div class="rating-summary">
+                      <div 
+                        v-for="(data, key) in preferenceReport.mood_analysis['평점 요약']" 
+                        :key="key"
+                        class="rating-summary-item"
+                      >
+                        <span class="summary-label">{{ data.label }}</span>
+                        <span class="summary-value">{{ data.count }}개 ({{ data.percentage }}%)</span>
+                      </div>
+                    </div>
+                  </li>
                   <li v-if="preferenceReport.director_preferences">
                     <strong>선호 감독</strong>
                     <div class="report-tags">
@@ -2216,6 +2248,89 @@ const cancelImageUpload = () => {
   font-weight: 700;
   text-shadow: 0 0 15px rgba(204, 255, 0, 0.7);
   letter-spacing: 2px;
+}
+
+/* 평점 분포 */
+.rating-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.rating-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.rating-label {
+  min-width: 40px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.rating-bar-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  height: 24px;
+}
+
+.rating-bar {
+  height: 20px;
+  background: var(--accent-acid);
+  border-radius: 0;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.3);
+}
+
+.rating-count {
+  font-size: 0.85rem;
+  color: #888;
+  font-family: var(--font-tech);
+  min-width: 80px;
+  text-align: right;
+}
+
+/* 평점 요약 */
+.rating-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.rating-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border: 1px solid #222;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.3s;
+}
+
+.rating-summary-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #333;
+}
+
+.summary-label {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-family: var(--font-tech);
+}
+
+.summary-value {
+  font-size: 0.9rem;
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .report-summary-wrapper {
