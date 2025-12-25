@@ -2,37 +2,35 @@
   <div class="preference-setup-page">
     <div class="preference-container">
       <h1>취향 설정</h1>
-      <p class="subtitle">관심 있는 장르와 분위기를 선택해주세요</p>
+      <p class="subtitle">좋아하는 영화를 최소 3개 이상 선택해주세요</p>
 
-      <!-- 관심 장르 섹션 -->
+      <!-- 영화 선택 섹션 -->
       <section class="preference-section">
-        <h2>관심 장르</h2>
-        <p class="section-description">좋아하는 장르를 복수 선택해주세요</p>
-        <div class="genre-grid">
-          <button
-            v-for="genre in allGenres"
-            :key="genre.id"
-            @click="toggleGenre(genre.id)"
-            :class="['genre-btn', { active: selectedGenres.includes(genre.id) }]"
-          >
-            {{ genre.genre_name }}
-          </button>
+        <div class="selection-info">
+          <p class="selection-count">선택한 영화: <strong>{{ selectedMovies.length }}</strong> / 최소 3개</p>
         </div>
-      </section>
-
-      <!-- 관심 분위기 섹션 -->
-      <section class="preference-section">
-        <h2>관심 분위기 / 감정</h2>
-        <p class="section-description">선호하는 분위기를 복수 선택해주세요</p>
-        <div class="mood-grid">
-          <button
-            v-for="mood in availableMoods"
-            :key="mood"
-            @click="toggleMood(mood)"
-            :class="['mood-btn', { active: selectedMoods.includes(mood) }]"
+        <div class="movie-grid">
+          <div
+            v-for="movie in availableMovies"
+            :key="movie.id"
+            @click="toggleMovie(movie.id)"
+            :class="['movie-card', { selected: selectedMovies.includes(movie.id) }]"
           >
-            {{ mood }}
-          </button>
+            <div class="movie-poster-wrapper">
+              <img 
+                :src="movie.poster_url || 'https://via.placeholder.com/200x300?text=No+Image'" 
+                :alt="movie.title"
+                class="movie-poster"
+              />
+              <div v-if="selectedMovies.includes(movie.id)" class="selected-overlay">
+                <span class="check-icon">✓</span>
+              </div>
+            </div>
+            <div class="movie-info">
+              <h3 class="movie-title">{{ movie.title }}</h3>
+              <p class="movie-rating">⭐ {{ movie.avg_rating?.toFixed(1) || '0.0' }}</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -40,7 +38,11 @@
 
       <div class="button-group">
         <button @click="skipSetup" class="btn-skip">건너뛰기</button>
-        <button @click="savePreferences" class="btn-save" :disabled="isLoading">
+        <button 
+          @click="savePreferences" 
+          class="btn-save" 
+          :disabled="isLoading || selectedMovies.length < 3"
+        >
           {{ isLoading ? '저장 중...' : '저장하기' }}
         </button>
       </div>
@@ -59,39 +61,28 @@ const authStore = useAuthStore()
 
 const API_URL = 'http://127.0.0.1:8000/api'
 
-const allGenres = ref([])
-const availableMoods = ref([
-  '힐링되는', '웃긴', '감동적인', '우울할 때 보는',
-  '긴장감 있는', '생각할 거리 있는', '가볍게 보기 좋은'
-])
-
-const selectedGenres = ref([])
-const selectedMoods = ref([])
+const availableMovies = ref([])
+const selectedMovies = ref([])
 const error = ref('')
 const isLoading = ref(false)
 
-// 장르 토글
-const toggleGenre = (genreId) => {
-  const index = selectedGenres.value.indexOf(genreId)
+// 영화 토글
+const toggleMovie = (movieId) => {
+  const index = selectedMovies.value.indexOf(movieId)
   if (index > -1) {
-    selectedGenres.value.splice(index, 1)
+    selectedMovies.value.splice(index, 1)
   } else {
-    selectedGenres.value.push(genreId)
-  }
-}
-
-// 분위기 토글
-const toggleMood = (mood) => {
-  const index = selectedMoods.value.indexOf(mood)
-  if (index > -1) {
-    selectedMoods.value.splice(index, 1)
-  } else {
-    selectedMoods.value.push(mood)
+    selectedMovies.value.push(movieId)
   }
 }
 
 // 취향 설정 저장
 const savePreferences = async () => {
+  if (selectedMovies.value.length < 3) {
+    error.value = '최소 3개 이상의 영화를 선택해주세요.'
+    return
+  }
+
   error.value = ''
   isLoading.value = true
 
@@ -99,8 +90,7 @@ const savePreferences = async () => {
     await axios.post(
       `${API_URL}/accounts/preferences/`,
       {
-        genre_ids: selectedGenres.value,
-        moods: selectedMoods.value
+        movie_ids: selectedMovies.value
       },
       {
         headers: {
@@ -113,7 +103,7 @@ const savePreferences = async () => {
     router.push('/')
   } catch (err) {
     console.error('취향 설정 저장 실패:', err)
-    error.value = err.response?.data?.detail || '취향 설정 저장에 실패했습니다.'
+    error.value = err.response?.data?.error || err.response?.data?.detail || '취향 설정 저장에 실패했습니다.'
   } finally {
     isLoading.value = false
   }
@@ -124,7 +114,7 @@ const skipSetup = () => {
   router.push('/')
 }
 
-// 장르 목록 가져오기
+// 영화 목록 가져오기
 onMounted(async () => {
   try {
     const response = await axios.get(
@@ -136,15 +126,11 @@ onMounted(async () => {
       }
     )
     
-    allGenres.value = response.data.all_genres || []
-    availableMoods.value = response.data.available_moods || availableMoods.value
+    availableMovies.value = response.data.available_movies || []
     
-    // 이미 설정된 취향이 있으면 불러오기
-    if (response.data.preferred_genres) {
-      selectedGenres.value = response.data.preferred_genres.map(g => g.id)
-    }
-    if (response.data.preferred_moods) {
-      selectedMoods.value = response.data.preferred_moods
+    // 이미 설정된 선호 영화가 있으면 불러오기
+    if (response.data.preferred_movies) {
+      selectedMovies.value = response.data.preferred_movies.map(m => m.id)
     }
   } catch (err) {
     console.error('취향 정보 가져오기 실패:', err)
@@ -153,8 +139,8 @@ onMounted(async () => {
       router.push('/login')
       return
     }
-    // 장르 목록은 빈 배열로 시작 (사용자가 직접 선택 가능)
-    allGenres.value = []
+    // 영화 목록은 빈 배열로 시작
+    availableMovies.value = []
   }
 })
 </script>
@@ -172,7 +158,7 @@ onMounted(async () => {
 
 .preference-container {
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
   background: transparent;
   padding: 60px 40px;
   border: 1px solid #222;
@@ -181,7 +167,7 @@ onMounted(async () => {
 h1 {
   font-family: var(--font-display);
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   color: var(--text-primary);
   font-size: 3rem;
   font-weight: 700;
@@ -192,7 +178,7 @@ h1 {
 
 .subtitle {
   text-align: center;
-  margin-bottom: 50px;
+  margin-bottom: 40px;
   color: #aaa;
   font-size: 1rem;
   font-family: var(--font-kr);
@@ -202,58 +188,110 @@ h1 {
   margin-bottom: 60px;
 }
 
-.preference-section h2 {
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 10px;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: -1px;
-}
-
-.section-description {
+.selection-info {
   margin-bottom: 30px;
-  color: #666;
-  font-size: 0.9rem;
+  text-align: center;
+}
+
+.selection-count {
+  color: #aaa;
+  font-size: 1rem;
   font-family: var(--font-kr);
 }
 
-.genre-grid,
-.mood-grid {
+.selection-count strong {
+  color: var(--accent-acid);
+  font-weight: 700;
+}
+
+.movie-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 30px;
+  margin-bottom: 0;
 }
 
-.genre-btn,
-.mood-btn {
-  padding: 15px 20px;
-  background: transparent;
-  border: 1px solid #333;
-  color: var(--text-primary);
-  font-family: var(--font-kr);
-  font-size: 0.9rem;
+.movie-card {
   cursor: pointer;
   transition: all 0.3s;
-  text-align: center;
-  border-radius: 0;
+  border: 1px solid #333;
+  background: transparent;
+  overflow: hidden;
+  position: relative;
 }
 
-.genre-btn:hover,
-.mood-btn:hover {
+.movie-card:hover {
+  transform: translateY(-5px);
   border-color: var(--accent-acid);
+  box-shadow: 0 5px 20px rgba(204, 255, 0, 0.2);
+}
+
+.movie-card.selected {
+  border-color: var(--accent-acid);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.4);
+}
+
+.movie-poster-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+}
+
+.movie-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(30%) contrast(110%);
+  transition: filter 0.3s;
+}
+
+.movie-card:hover .movie-poster,
+.movie-card.selected .movie-poster {
+  filter: grayscale(0%) contrast(120%);
+}
+
+.selected-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(204, 255, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.check-icon {
+  font-size: 3rem;
   color: var(--accent-acid);
-  transform: translateY(-2px);
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
 }
 
-.genre-btn.active,
-.mood-btn.active {
-  background: var(--accent-acid);
-  border-color: var(--accent-acid);
-  color: #000;
-  font-weight: 600;
+.movie-info {
+  padding: 15px;
+  text-align: center;
+}
+
+.movie-title {
+  font-family: var(--font-kr);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movie-rating {
+  font-size: 0.85rem;
+  color: var(--accent-acid);
+  font-family: var(--font-mono);
 }
 
 .error-message {
@@ -267,7 +305,9 @@ h1 {
   display: flex;
   gap: 20px;
   justify-content: center;
-  margin-top: 40px;
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid #222;
 }
 
 .btn-skip,
@@ -308,6 +348,9 @@ h1 {
 .btn-save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background: #333;
+  border-color: #333;
+  color: #666;
 }
 
 /* 반응형 */
@@ -320,16 +363,9 @@ h1 {
     font-size: 2rem;
   }
 
-  .genre-grid,
-  .mood-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-  }
-
-  .genre-btn,
-  .mood-btn {
-    padding: 12px 15px;
-    font-size: 0.85rem;
+  .movie-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 20px;
   }
 
   .button-group {
@@ -342,4 +378,3 @@ h1 {
   }
 }
 </style>
-

@@ -133,3 +133,70 @@ def similar_movies(request, movie_pk):
     
     serializer = MovieListSerializer(similar, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def recommended_movies(request):
+    """사용자 선호 영화 기반 추천 영화"""
+    if not request.user.is_authenticated:
+        # 비로그인 사용자는 랜덤 영화 10개 반환
+        import random
+        all_movies = list(Movie.objects.prefetch_related('genres').all())
+        if len(all_movies) > 10:
+            movies = random.sample(all_movies, 10)
+        else:
+            movies = all_movies
+        serializer = MovieListSerializer(movies, many=True)
+        return Response(serializer.data)
+    
+    user = request.user
+    preferred_movies = user.preferred_movies.all()
+    
+    if not preferred_movies.exists():
+        # 선호 영화가 없으면 평점 높은 영화 반환
+        movies = Movie.objects.prefetch_related('genres').order_by('-avg_rating', '-review_count')[:12]
+        serializer = MovieListSerializer(movies, many=True)
+        return Response(serializer.data)
+    
+    # 선호 영화들의 장르 수집
+    preferred_genre_ids = set()
+    preferred_movie_ids = set(preferred_movies.values_list('id', flat=True))
+    
+    for movie in preferred_movies:
+        for genre in movie.genres.all():
+            preferred_genre_ids.add(genre.id)
+    
+    if not preferred_genre_ids:
+        # 장르가 없으면 평점 높은 영화 반환
+        movies = Movie.objects.prefetch_related('genres').exclude(
+            id__in=preferred_movie_ids
+        ).order_by('-avg_rating', '-review_count')[:12]
+        serializer = MovieListSerializer(movies, many=True)
+        return Response(serializer.data)
+    
+    # 선호 영화와 같은 장르를 가진 영화 찾기 (선호 영화 제외)
+    # 장르 유사도가 높고 평점이 높은 순으로 정렬
+    from django.db.models import Count, Q
+    
+    recommended = Movie.objects.filter(
+        genres__id__in=preferred_genre_ids
+    ).exclude(
+        id__in=preferred_movie_ids
+    ).annotate(
+        genre_match_count=Count('genres', filter=Q(genres__id__in=preferred_genre_ids))
+    ).distinct().order_by(
+        '-genre_match_count',  # 장르 매칭 개수 (많을수록 유사)
+        '-avg_rating',         # 평점 높은 순
+        '-review_count'       # 리뷰 많은 순
+    )[:12]
+    
+    # 결과가 12개 미만이면 평점 높은 영화로 채우기
+    if recommended.count() < 12:
+        additional = Movie.objects.exclude(
+            id__in=[m.id for m in recommended] + list(preferred_movie_ids)
+        ).order_by('-avg_rating', '-review_count')[:12 - recommended.count()]
+        recommended = list(recommended) + list(additional)
+    
+    serializer = MovieListSerializer(recommended, many=True)
+    return Response(serializer.data)

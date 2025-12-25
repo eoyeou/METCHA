@@ -85,7 +85,7 @@
 
           <div class="movie-description">
             <h3>줄거리</h3>
-            <p>{{ movie.description || '줄거리 정보가 없습니다.' }}</p>
+            <p>{{ movie.kor_description || movie.description || '줄거리 정보가 없습니다.' }}</p>
           </div>
         </div>
 

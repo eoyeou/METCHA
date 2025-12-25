@@ -83,8 +83,8 @@
               />
             </div>
             <div class="movie-info">
-              <h3 class="movie-title">{{ movie.title }}</h3>
-              <p v-if="movie.original_title" class="movie-original-title">{{ movie.original_title }}</p>
+              <div class="movie-title">{{ movie.title || movie.original_title || '제목 없음' }}</div>
+              <p v-if="movie.original_title && movie.title !== movie.original_title" class="movie-original-title">{{ movie.original_title }}</p>
               <div class="movie-meta">
                 <span class="movie-year">{{ movie.release_year }}</span>
                 <span class="movie-rating">⭐ {{ movie.avg_rating.toFixed(1) }}</span>
@@ -171,6 +171,23 @@ const performSearch = async () => {
     
     searchResults.value = response.data.results || []
     routeQuery.value = query
+    
+    // 디버깅: 검색 결과 확인
+    console.log('[검색 결과] 전체 응답:', response.data)
+    if (searchResults.value.length > 0) {
+      console.log('[검색 결과] 첫 번째 영화 전체 데이터:', searchResults.value[0])
+      console.log('[검색 결과] 첫 번째 영화:', {
+        id: searchResults.value[0].id,
+        title: searchResults.value[0].title,
+        title_type: typeof searchResults.value[0].title,
+        title_length: searchResults.value[0].title?.length,
+        original_title: searchResults.value[0].original_title,
+        has_title: !!searchResults.value[0].title,
+        all_keys: Object.keys(searchResults.value[0])
+      })
+    } else {
+      console.log('[검색 결과] 결과가 없습니다')
+    }
     
     // URL 업데이트 (검색어를 쿼리 파라미터로)
     if (route.query.q !== query) {
@@ -458,10 +475,12 @@ const handleLogout = async () => {
   cursor: pointer;
   transition: all 0.5s;
   border-radius: 0;
-  overflow: hidden;
-  background: transparent;
+  overflow: visible;
+  background: #000;
   border: 1px solid #333;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .movie-card:hover {
@@ -493,18 +512,32 @@ const handleLogout = async () => {
 
 .movie-info {
   padding: 15px;
+  min-height: 80px;
+  background: #000;
+  position: relative;
+  z-index: 1;
 }
 
 .movie-title {
-  font-size: 14px;
-  font-family: var(--font-kr);
-  font-weight: 500;
+  font-size: 16px !important;
+  font-family: var(--font-kr) !important;
+  font-weight: 600 !important;
   letter-spacing: -0.01em;
-  margin-bottom: 8px;
+  margin: 0 0 8px 0 !important;
+  padding: 4px 0 !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-primary);
+  color: #ffffff !important;
+  display: block !important;
+  min-height: 24px !important;
+  line-height: 1.5 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 1) !important;
+  position: relative !important;
+  z-index: 10 !important;
+  background: transparent !important;
 }
 
 .movie-original-title {

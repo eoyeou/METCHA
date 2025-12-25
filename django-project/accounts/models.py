@@ -34,6 +34,14 @@ class User(AbstractUser):
         blank=True,
         help_text="사용자가 선호하는 분위기/감정 리스트 ['힐링되는', '웃긴', ...]"
     )
+    
+    # 회원가입 시 선택한 선호 영화들
+    preferred_movies = models.ManyToManyField(
+        'movies.Movie',
+        related_name='preferred_users',
+        blank=True,
+        help_text="사용자가 선호하는 영화들"
+    )
 
     class Meta:
         db_table = 'user'

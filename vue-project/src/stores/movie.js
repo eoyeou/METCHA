@@ -22,6 +22,13 @@ export const useMovieStore = defineStore('movie', () => {
     try {
       const response = await axios.get(`${API_URL}/movies/${movieId}/`)
       currentMovie.value = response.data
+      // 디버깅: kor_description 확인
+      console.log('영화 데이터:', {
+        title: response.data.title,
+        has_kor_description: !!response.data.kor_description,
+        kor_description_length: response.data.kor_description?.length || 0,
+        kor_description_preview: response.data.kor_description?.substring(0, 50) || '없음'
+      })
       // 리뷰에 showContent 속성 추가 (스포일러 토글용)
       if (currentMovie.value.reviews) {
         currentMovie.value.reviews = currentMovie.value.reviews.map(review => ({

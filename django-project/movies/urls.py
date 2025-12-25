@@ -8,5 +8,6 @@ urlpatterns = [
     path('movies/', views.movie_list),
     path('movies/<int:movie_pk>/', views.movie_detail),
     path('movies/<int:movie_pk>/similar/', views.similar_movies),
+    path('movies/recommended/', views.recommended_movies),
     path('movies/search/semantic/', search_views.semantic_search),
 ]

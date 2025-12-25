@@ -1571,7 +1571,7 @@ const cancelImageUpload = () => {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 40px;
 }
 
 .logo {
@@ -1579,12 +1579,22 @@ const cancelImageUpload = () => {
   font-weight: 700;
   letter-spacing: -2px;
   font-size: 1.5rem;
-  cursor: none;
+  cursor: pointer;
   color: var(--text-primary);
   width: auto;
   height: auto;
   border-radius: 0;
   background: transparent;
+  text-transform: uppercase;
+}
+
+.username {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: -1px;
 }
 
 .id-badge {

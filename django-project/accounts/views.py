@@ -323,50 +323,48 @@ def logout(request):
 @api_view(['POST', 'GET'])
 @permission_classes([IsAuthenticated])
 def set_preferences(request):
-    """취향 설정 (관심 장르, 관심 분위기)"""
+    """취향 설정 (선호 영화 선택)"""
     user = request.user
     
     if request.method == 'GET':
-        # 현재 설정된 취향 조회
-        from movies.models import Genre
-        from movies.serializers import GenreSerializer
+        # 현재 설정된 선호 영화 조회
+        from movies.models import Movie
+        from movies.serializers import MovieListSerializer
         
-        preferred_genres = user.preferred_genres.all()
-        preferred_moods = user.preferred_moods or []
+        preferred_movies = user.preferred_movies.all()
         
-        # 모든 장르 목록도 함께 반환
-        all_genres = Genre.objects.all()
+        # 추천용 영화 목록 반환 (평점 높은 순, 최대 50개)
+        all_movies = Movie.objects.prefetch_related('genres').order_by('-avg_rating', '-review_count')[:50]
         
         return Response({
-            'preferred_genres': GenreSerializer(preferred_genres, many=True).data,
-            'preferred_moods': preferred_moods,
-            'all_genres': GenreSerializer(all_genres, many=True).data,
-            'available_moods': [
-                '힐링되는', '웃긴', '감동적인', '우울할 때 보는',
-                '긴장감 있는', '생각할 거리 있는', '가볍게 보기 좋은'
-            ]
+            'preferred_movies': MovieListSerializer(preferred_movies, many=True).data,
+            'available_movies': MovieListSerializer(all_movies, many=True).data
         }, status=status.HTTP_200_OK)
     
     elif request.method == 'POST':
-        # 취향 설정 저장
-        genre_ids = request.data.get('genre_ids', [])
-        moods = request.data.get('moods', [])
+        # 선호 영화 설정 저장
+        movie_ids = request.data.get('movie_ids', [])
         
-        # 장르 설정
-        if genre_ids:
-            from movies.models import Genre
-            genres = Genre.objects.filter(id__in=genre_ids)
-            user.preferred_genres.set(genres)
+        # 최소 3개 선택 검증
+        if len(movie_ids) < 3:
+            return Response({
+                'error': '최소 3개 이상의 영화를 선택해주세요.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 분위기 설정
-        if moods:
-            user.preferred_moods = moods
-            user.save(update_fields=['preferred_moods'])
+        # 영화 설정
+        from movies.models import Movie
+        movies = Movie.objects.filter(id__in=movie_ids)
+        
+        if movies.count() != len(movie_ids):
+            return Response({
+                'error': '일부 영화를 찾을 수 없습니다.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.preferred_movies.set(movies)
         
         return Response({
             'message': '취향 설정이 완료되었습니다.',
-            'preferred_genres': [g.id for g in user.preferred_genres.all()],
-            'preferred_moods': user.preferred_moods or []
+            'preferred_movies': [m.id for m in user.preferred_movies.all()]
         }, status=status.HTTP_200_OK)
 
 

@@ -228,14 +228,26 @@ def semantic_search(request):
         movies_list = [r['movie'] for r in unique_results]
         serializer = MovieListSerializer(movies_list, many=True, context={'request': request})
         
+        # 디버깅: 직렬화된 데이터 확인
+        serialized_data = serializer.data
+        if serialized_data:
+            first_movie = serialized_data[0]
+            print(f"[검색 API 디버깅] 첫 번째 영화 직렬화 데이터:")
+            print(f"  - id: {first_movie.get('id')}")
+            print(f"  - title: {first_movie.get('title')} (타입: {type(first_movie.get('title'))})")
+            print(f"  - original_title: {first_movie.get('original_title')}")
+            print(f"  - title이 None인가?: {first_movie.get('title') is None}")
+            print(f"  - title이 빈 문자열인가?: {first_movie.get('title') == ''}")
+            print(f"  - 모든 키: {list(first_movie.keys())}")
+        
         # 디버깅: 매트릭스 포함 여부 확인
         if '매트릭스' in query.lower() or 'matrix' in query.lower():
-            matrix_idx = next((i for i, m in enumerate(movies_list) if '매트릭스' in m.title), -1)
+            matrix_idx = next((i for i, m in enumerate(movies_list) if m.title and ('매트릭스' in m.title or 'Matrix' in m.title)), -1)
             if matrix_idx >= 0:
                 print(f"[검색 디버깅] 매트릭스 순위: {matrix_idx + 1}위 (총 {len(movies_list)}개)")
         
         return Response({
-            "results": serializer.data,
+            "results": serialized_data,
             "similarity_mode": "keyword" if is_keyword_mode else "semantic",
             "max_similarity": max_similarity,
             "total_found": len(unique_results)

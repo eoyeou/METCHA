@@ -68,9 +68,9 @@
     <main class="main-content">
       <!-- 영화 섹션들 (검색 안 할 때) -->
       <div v-if="!searchQuery" class="movies-sections">
-        <!-- 큰 포스터 카드 (최신 영화) -->
+        <!-- 큰 포스터 카드 (추천 영화) -->
         <div v-if="featuredMovies.length > 0" class="featured-section">
-          <h2>신작 영화</h2>
+          <h2>추천 영화</h2>
           <div class="featured-movies">
             <div
               v-for="movie in featuredMovies.slice(0, 3)"
@@ -293,19 +293,39 @@ const loadPopularMovies = async () => {
 
 const loadFeaturedMovies = async () => {
   try {
-    console.log('[신작 영화] API 호출 시작...')
-    const response = await axios.get(`${API_URL}/movies/`, {
-      params: { order_by: '-created_at' }
-    })
-    console.log('[신작 영화] API 응답:', response.status, response.data?.length || 'N/A')
-    let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
-    featuredMovies.value = movies.slice(0, 3)
-    console.log('[신작 영화] 로드 완료:', featuredMovies.value.length, '개')
+    console.log('[추천 영화] API 호출 시작...')
+    
+    // 로그인한 사용자는 추천 영화 API 호출
+    if (authStore.isAuthenticated && authStore.token) {
+      const response = await axios.get(`${API_URL}/movies/recommended/`, {
+        headers: {
+          'Authorization': `Token ${authStore.token}`
+        }
+      })
+      console.log('[추천 영화] API 응답:', response.status, response.data?.length || 'N/A')
+      let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+      featuredMovies.value = movies.slice(0, 3)
+      console.log('[추천 영화] 로드 완료:', featuredMovies.value.length, '개')
+    } else {
+      // 비로그인 사용자는 랜덤 영화 API 호출
+      const response = await axios.get(`${API_URL}/movies/recommended/`)
+      console.log('[추천 영화] API 응답 (비로그인):', response.status, response.data?.length || 'N/A')
+      let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+      featuredMovies.value = movies.slice(0, 3)
+      console.log('[추천 영화] 로드 완료 (비로그인):', featuredMovies.value.length, '개')
+    }
   } catch (error) {
-    console.error('[신작 영화] 로드 실패:', error)
-    console.error('[신작 영화] 에러 상세:', error.response?.data || error.message)
-    console.error('[신작 영화] 에러 상태:', error.response?.status)
-    featuredMovies.value = []
+    console.error('[추천 영화] 로드 실패:', error)
+    console.error('[추천 영화] 에러 상세:', error.response?.data || error.message)
+    console.error('[추천 영화] 에러 상태:', error.response?.status)
+    // 에러 발생 시 랜덤 영화로 fallback
+    try {
+      const response = await axios.get(`${API_URL}/movies/recommended/`)
+      let movies = Array.isArray(response.data) ? response.data : (response.data?.results || [])
+      featuredMovies.value = movies.slice(0, 3)
+    } catch (fallbackError) {
+      featuredMovies.value = []
+    }
   }
 }
 

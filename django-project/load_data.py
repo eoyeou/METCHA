@@ -100,6 +100,17 @@ def load_movies(pages=10):
                 # 한국어 설명 (UI 표시용)
                 kor_description = detail_ko.get('overview', '')
                 
+                # 한국어 설명이 비어있으면 영어 설명을 번역 (deep-translator 사용)
+                if not kor_description and description and description != 'No description available.':
+                    try:
+                        from deep_translator import GoogleTranslator
+                        translator = GoogleTranslator(source='en', target='ko')
+                        kor_description = translator.translate(description)
+                        print(f"  [번역] {movie_data.get('title', 'Unknown')}: 영어 → 한국어 번역 완료")
+                    except Exception as e:
+                        print(f"  [번역 실패] {movie_data.get('title', 'Unknown')}: {str(e)}")
+                        kor_description = ''  # 번역 실패 시 빈 문자열 유지
+                
                 # 영어 original_title
                 original_title = detail_en.get('original_title', '')
                 # 한국어 title
@@ -201,6 +212,17 @@ def update_empty_descriptions():
             # 한국어 설명 (UI 표시용)
             kor_description = detail_ko.get('overview', '')
             
+            # 한국어 설명이 비어있으면 영어 설명을 번역 (deep-translator 사용)
+            if not kor_description and description and description != 'No description available.':
+                try:
+                    from deep_translator import GoogleTranslator
+                    translator = GoogleTranslator(source='en', target='ko')
+                    kor_description = translator.translate(description)
+                    print(f"  [번역] {movie.title}: 영어 → 한국어 번역 완료")
+                except Exception as e:
+                    print(f"  [번역 실패] {movie.title}: {str(e)}")
+                    kor_description = ''  # 번역 실패 시 빈 문자열 유지
+            
             # 업데이트
             movie.description = description
             movie.kor_description = kor_description
@@ -254,6 +276,17 @@ def update_all_movies():
             description = detail_en.get('overview', 'No description available.')
             # 한국어 설명 (UI 표시용)
             kor_description = detail_ko.get('overview', '')
+            
+            # 한국어 설명이 비어있으면 영어 설명을 번역 (deep-translator 사용)
+            if not kor_description and description and description != 'No description available.':
+                try:
+                    from deep_translator import GoogleTranslator
+                    translator = GoogleTranslator(source='en', target='ko')
+                    kor_description = translator.translate(description)
+                    print(f"  [번역] {movie.title}: 영어 → 한국어 번역 완료")
+                except Exception as e:
+                    print(f"  [번역 실패] {movie.title}: {str(e)}")
+                    kor_description = ''  # 번역 실패 시 빈 문자열 유지
             
             # 영어 original_title
             original_title = detail_en.get('original_title', '')
