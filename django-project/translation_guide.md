@@ -2,10 +2,11 @@
 
 ## 번역 방법 비교
 
-### 1. googletrans (추천 - 무료)
-- **장점**: 무료, 설치 간단, 사용 쉬움
-- **단점**: 제한적 (하루 약 15,000자), 가끔 불안정
-- **설치**: `pip install googletrans==4.0.0rc1`
+### 1. deep-translator (추천 - 무료)
+- **장점**: 무료, 설치 간단, 사용 쉬움, googletrans보다 안정적
+- **단점**: 제한적 (하루 약 15,000자)
+- **설치**: `pip install deep-translator>=1.11.0`
+- **참고**: 기존 googletrans의 대체 라이브러리로, 더 나은 의존성 관리 제공
 
 ### 2. Papago API (네이버)
 - **장점**: 한국어 번역 품질 좋음, 무료 할당량 제공
@@ -19,7 +20,7 @@
 
 ## 사용 방법
 
-### 기본 사용 (googletrans)
+### 기본 사용 (deep-translator)
 ```bash
 # 모든 영어 리뷰 번역
 python translate_reviews.py
@@ -52,7 +53,7 @@ python translate_reviews.py --method google_api \
 ## 주의사항
 
 1. **기존 content 덮어쓰기**: 기본적으로 번역된 내용으로 `content` 필드를 교체합니다
-2. **API 제한**: googletrans는 하루 약 15,000자 제한이 있을 수 있습니다
+2. **API 제한**: deep-translator(Google Translate 무료 버전)는 하루 약 15,000자 제한이 있을 수 있습니다
 3. **번역 품질**: 자동 번역이므로 완벽하지 않을 수 있습니다
 4. **시간 소요**: 많은 리뷰를 번역하면 시간이 걸립니다
 

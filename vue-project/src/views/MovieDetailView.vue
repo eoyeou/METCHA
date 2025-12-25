@@ -16,7 +16,7 @@
     <div v-else-if="movie" class="movie-detail">
       <!-- 헤더 -->
       <header class="movie-header">
-        <div class="logo" @click="$router.push('/')">MOVIE SITE</div>
+        <div class="logo" @click="$router.push('/')">Metcha</div>
         <div class="header-buttons">
           <button @click="goToProfile" class="btn-header">내 프로필</button>
           <button @click="goToHome" class="btn-header">홈으로</button>

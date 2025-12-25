@@ -22,16 +22,42 @@ def load_genres():
     """장르 데이터 로드"""
     print("\n[1단계] 장르 데이터 로딩...")
     genre_url = f"{BASE_URL}/genre/movie/list"
-    genre_response = requests.get(genre_url, params={'api_key': API_KEY, 'language': 'ko-KR'})
-    genre_count = 0
+    
+    try:
+        genre_response = requests.get(genre_url, params={'api_key': API_KEY, 'language': 'ko-KR'})
+        genre_response.raise_for_status()  # HTTP 에러 확인
+        response_data = genre_response.json()
+        
+        # 응답 확인
+        if 'genres' not in response_data:
+            print(f"  ✗ 오류: API 응답에 'genres' 키가 없습니다.")
+            print(f"  응답 내용: {response_data}")
+            if 'status_message' in response_data:
+                print(f"  오류 메시지: {response_data['status_message']}")
+            if 'status_code' in response_data:
+                print(f"  상태 코드: {response_data['status_code']}")
+            return 0
+        
+        genre_count = 0
+        for g in response_data['genres']:
+            Genre.objects.get_or_create(genre_name=g['name'])
+            print(f"  ✓ {g['name']}")
+            genre_count += 1
 
-    for g in genre_response.json()['genres']:
-        Genre.objects.get_or_create(genre_name=g['name'])
-        print(f"  ✓ {g['name']}")
-        genre_count += 1
-
-    print(f"\n장르 {genre_count}개 로드 완료!\n")
-    return genre_count
+        print(f"\n장르 {genre_count}개 로드 완료!\n")
+        return genre_count
+        
+    except requests.exceptions.RequestException as e:
+        print(f"  ✗ API 요청 실패: {str(e)}")
+        print(f"  API 키 확인이 필요합니다. .env 파일에 TMDB_API_KEY가 설정되어 있는지 확인하세요.")
+        return 0
+    except KeyError as e:
+        print(f"  ✗ 응답 데이터 형식 오류: {str(e)}")
+        print(f"  응답 내용: {response_data}")
+        return 0
+    except Exception as e:
+        print(f"  ✗ 예상치 못한 오류: {str(e)}")
+        return 0
 
 
 def load_movies(pages=10):

@@ -2,7 +2,7 @@
 영어 리뷰를 한국어로 번역하는 스크립트
 
 번역 방법:
-1. googletrans (무료, 간단) - 추천
+1. deep-translator (무료, 간단) - 추천 (구 googletrans 대체)
 2. Papago API (네이버, 한국어 번역 품질 좋음)
    ⚠️ 제한: 한 번에 최대 5,000자, 하루 최대 10,000자
 3. Google Translate API (유료)
@@ -46,23 +46,30 @@ def detect_language(text):
 
 
 def translate_with_googletrans(text, target_lang='ko'):
-    """googletrans 라이브러리 사용 (무료)"""
+    """deep-translator 라이브러리 사용 (무료, googletrans 대체)"""
     try:
-        from googletrans import Translator
-        translator = Translator()
+        from deep_translator import GoogleTranslator
         
-        # 언어 감지
-        detected = translator.detect(text)
-        if detected.lang == target_lang:
-            return text  # 이미 한국어면 번역 불필요
+        # GoogleTranslator는 자동으로 언어를 감지하고 번역합니다
+        translator = GoogleTranslator(source='auto', target=target_lang)
         
-        # 번역
-        result = translator.translate(text, dest=target_lang)
-        return result.text
+        # 텍스트가 너무 길면 분할해서 번역 (5000자 제한)
+        max_length = 5000
+        if len(text) > max_length:
+            # 긴 텍스트는 여러 부분으로 나눠서 번역
+            parts = []
+            for i in range(0, len(text), max_length):
+                part = text[i:i + max_length]
+                translated_part = translator.translate(part)
+                parts.append(translated_part)
+            return ' '.join(parts)
+        else:
+            translated = translator.translate(text)
+            return translated
         
     except ImportError:
-        print("googletrans가 설치되지 않았습니다.")
-        print("설치: pip install googletrans==4.0.0rc1")
+        print("deep-translator가 설치되지 않았습니다.")
+        print("설치: pip install deep-translator>=1.11.0")
         return None
     except Exception as e:
         print(f"번역 실패: {str(e)}")
@@ -336,7 +343,7 @@ def translate_all_reviews(method='googletrans', max_reviews=None, update_content
             
             # API rate limit 방지
             if method == 'googletrans':
-                time.sleep(0.5)  # googletrans는 무료지만 제한 있음
+                time.sleep(0.5)  # deep-translator는 무료지만 제한 있음
             elif method == 'papago':
                 # Papago API 제한: 한 번에 최대 5,000자, 하루 최대 10,000자
                 # 초당 10개 요청 제한

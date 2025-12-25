@@ -1,6 +1,6 @@
 <template>
   <header>
-    <div class="logo hover-trigger">METCHA</div>
+    <div class="logo hover-trigger">Metcha</div>
     <div class="nav-items hover-trigger">
       <span>Archive</span>
       <span>Index</span>
