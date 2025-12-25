@@ -908,8 +908,10 @@ const toggleFollow = async (userId, user) => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 40px;
-  z-index: 100;
-  mix-blend-mode: difference;
+  z-index: 1000;
+  background: var(--bg-color);
+  border-bottom: 1px solid #222;
+  backdrop-filter: blur(10px);
 }
 
 .logo {
@@ -951,6 +953,7 @@ const toggleFollow = async (userId, user) => {
   grid-template-columns: 1fr 2fr;
   gap: 0;
   padding: 0;
+  padding-top: 100px; /* 헤더 높이만큼 여백 추가 (더 여유있게) */
   min-height: 100vh;
   border-bottom: 1px solid #222;
   position: relative;
@@ -1040,6 +1043,7 @@ const toggleFollow = async (userId, user) => {
 
 .movie-info {
   padding: 60px;
+  padding-top: 80px; /* 헤더와 겹치지 않도록 추가 여백 */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1520,6 +1524,7 @@ const toggleFollow = async (userId, user) => {
 
 .reviews-section {
   padding: 40px;
+  padding-top: 120px; /* 헤더 높이 + 여백 */
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -1791,10 +1796,17 @@ const toggleFollow = async (userId, user) => {
   .movie-content {
     grid-template-columns: 1fr;
     padding: 20px;
+    padding-top: 80px; /* 헤더 높이만큼 여백 */
   }
   
   .movie-header {
     padding: 15px 20px;
+    background: var(--bg-color);
+    border-bottom: 1px solid #222;
+  }
+  
+  .movie-info {
+    padding-top: 100px; /* 모바일에서도 헤더와 겹치지 않도록 */
   }
   
   .logo {
@@ -1823,6 +1835,7 @@ const toggleFollow = async (userId, user) => {
   
   .reviews-section {
     padding: 20px;
+    padding-top: 100px; /* 헤더 높이 + 여백 */
   }
 }
 </style>
