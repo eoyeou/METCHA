@@ -1529,10 +1529,11 @@ const cancelImageUpload = () => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 40px;
-  z-index: 100;
-  mix-blend-mode: difference;
+  z-index: 1000;
+  background: var(--bg-color);
   border-bottom: 1px solid #222;
   margin-bottom: 0;
+  backdrop-filter: blur(10px);
 }
 
 .header-left {
@@ -1618,6 +1619,7 @@ const cancelImageUpload = () => {
 .profile-content {
   margin-top: 100px;
   padding: 60px 40px;
+  padding-top: 120px; /* 헤더 높이 + 추가 여백 */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2019,6 +2021,7 @@ const cancelImageUpload = () => {
 .report-section {
   width: 100%;
   padding: 40px 0;
+  padding-top: 60px; /* 헤더와 겹치지 않도록 추가 여백 */
 }
 
 .report-empty {
