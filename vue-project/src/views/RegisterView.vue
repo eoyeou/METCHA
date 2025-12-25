@@ -123,26 +123,47 @@ const handleRegister = async () => {
     authStore.token = token
     authStore.user = response.data.user
     
-    // 홈으로 이동
-    alert('회원가입이 완료되었습니다!')
-    router.push('/')
+    // 취향 설정 페이지로 이동
+    router.push('/preferences/setup')
   } catch (err) {
+    console.error('회원가입 에러:', err)
+    console.error('에러 응답:', err.response?.data)
+    
     // 에러 메시지 처리
     if (err.response?.data) {
       const errors = err.response.data
+      
+      // 필드별 에러 메시지 수집
+      const errorMessages = []
+      
       if (errors.username) {
-        error.value = `아이디: ${errors.username[0]}`
-      } else if (errors.email) {
-        error.value = `이메일: ${errors.email[0]}`
-      } else if (errors.password) {
-        error.value = `비밀번호: ${errors.password[0]}`
-      } else if (errors.non_field_errors) {
-        error.value = errors.non_field_errors[0]
-      } else {
-        error.value = '회원가입에 실패했습니다.'
+        errorMessages.push(`아이디: ${Array.isArray(errors.username) ? errors.username[0] : errors.username}`)
       }
+      if (errors.email) {
+        errorMessages.push(`이메일: ${Array.isArray(errors.email) ? errors.email[0] : errors.email}`)
+      }
+      if (errors.password) {
+        errorMessages.push(`비밀번호: ${Array.isArray(errors.password) ? errors.password[0] : errors.password}`)
+      }
+      if (errors.non_field_errors) {
+        errorMessages.push(Array.isArray(errors.non_field_errors) ? errors.non_field_errors[0] : errors.non_field_errors)
+      }
+      if (errors.detail) {
+        errorMessages.push(errors.detail)
+      }
+      
+      // 모든 에러 메시지가 없으면 전체 에러 객체 표시
+      if (errorMessages.length === 0) {
+        error.value = `회원가입 실패: ${JSON.stringify(errors)}`
+      } else {
+        error.value = errorMessages.join(', ')
+      }
+    } else if (err.request) {
+      // 요청은 보냈지만 응답을 받지 못한 경우
+      error.value = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.'
     } else {
-      error.value = '회원가입에 실패했습니다.'
+      // 요청 설정 중 에러
+      error.value = `회원가입에 실패했습니다: ${err.message || '알 수 없는 오류'}`
     }
   } finally {
     isLoading.value = false

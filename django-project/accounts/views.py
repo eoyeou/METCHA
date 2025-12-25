@@ -320,6 +320,56 @@ def logout(request):
     return Response({'message': '로그아웃되었습니다.'}, status=status.HTTP_200_OK)
 
 
+@api_view(['POST', 'GET'])
+@permission_classes([IsAuthenticated])
+def set_preferences(request):
+    """취향 설정 (관심 장르, 관심 분위기)"""
+    user = request.user
+    
+    if request.method == 'GET':
+        # 현재 설정된 취향 조회
+        from movies.models import Genre
+        from movies.serializers import GenreSerializer
+        
+        preferred_genres = user.preferred_genres.all()
+        preferred_moods = user.preferred_moods or []
+        
+        # 모든 장르 목록도 함께 반환
+        all_genres = Genre.objects.all()
+        
+        return Response({
+            'preferred_genres': GenreSerializer(preferred_genres, many=True).data,
+            'preferred_moods': preferred_moods,
+            'all_genres': GenreSerializer(all_genres, many=True).data,
+            'available_moods': [
+                '힐링되는', '웃긴', '감동적인', '우울할 때 보는',
+                '긴장감 있는', '생각할 거리 있는', '가볍게 보기 좋은'
+            ]
+        }, status=status.HTTP_200_OK)
+    
+    elif request.method == 'POST':
+        # 취향 설정 저장
+        genre_ids = request.data.get('genre_ids', [])
+        moods = request.data.get('moods', [])
+        
+        # 장르 설정
+        if genre_ids:
+            from movies.models import Genre
+            genres = Genre.objects.filter(id__in=genre_ids)
+            user.preferred_genres.set(genres)
+        
+        # 분위기 설정
+        if moods:
+            user.preferred_moods = moods
+            user.save(update_fields=['preferred_moods'])
+        
+        return Response({
+            'message': '취향 설정이 완료되었습니다.',
+            'preferred_genres': [g.id for g in user.preferred_genres.all()],
+            'preferred_moods': user.preferred_moods or []
+        }, status=status.HTTP_200_OK)
+
+
 @api_view(['POST', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def follow_user(request, user_id):

@@ -6,6 +6,7 @@ import RegisterView from '../views/RegisterView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import ReviewCreateView from '../views/ReviewCreateView.vue'
 import SearchResultsView from '../views/SearchResultsView.vue'
+import PreferenceSetupView from '../views/PreferenceSetupView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,6 +45,11 @@ const router = createRouter({
       path: '/search',
       name: 'searchResults',
       component: SearchResultsView
+    },
+    {
+      path: '/preferences/setup',
+      name: 'preferenceSetup',
+      component: PreferenceSetupView
     }
   ]
 })

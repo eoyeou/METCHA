@@ -19,6 +19,21 @@ class User(AbstractUser):
         blank=True,
         help_text="사용자 평균 Satisfaction 점수 (0-100)"
     )
+    
+    # 회원가입 시 선택한 관심 장르
+    preferred_genres = models.ManyToManyField(
+        'movies.Genre',
+        related_name='preferred_users',
+        blank=True,
+        help_text="사용자가 선호하는 장르들"
+    )
+    
+    # 회원가입 시 선택한 관심 분위기/감정
+    preferred_moods = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="사용자가 선호하는 분위기/감정 리스트 ['힐링되는', '웃긴', ...]"
+    )
 
     class Meta:
         db_table = 'user'
