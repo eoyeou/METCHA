@@ -234,72 +234,84 @@
               </button>
             </div>
             <div class="report-main-content">
-              <div class="report-left">
-                <ul class="report-list">
-                  <li v-if="preferenceReport.genre_distribution">
-                    <strong>TOP 장르</strong>
-                    <div class="report-tags">
-                      <span v-for="(percent, genre) in preferenceReport.genre_distribution" :key="genre" class="report-tag">
-                        {{ genre }} <span class="tag-value">({{ percent }}%)</span>
-                      </span>
-                    </div>
-                  </li>
-                  <li v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평균 평점']">
-                    <strong>평균 별점</strong>
-                    <div class="report-value">{{ preferenceReport.mood_analysis['평균 평점'] }}점</div>
-                  </li>
-                  <li v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평점 분포']">
-                    <strong>평점 분포</strong>
-                    <div class="rating-distribution">
-                      <div 
-                        v-for="(data, rating) in preferenceReport.mood_analysis['평점 분포']" 
-                        :key="rating"
-                        class="rating-bar-item"
-                      >
-                        <div class="rating-label">{{ rating }}점</div>
-                        <div class="rating-bar-container">
-                          <div 
-                            class="rating-bar" 
-                            :style="{ width: data.percentage + '%' }"
-                          ></div>
-                          <span class="rating-count">{{ data.count }}개 ({{ data.percentage }}%)</span>
-                        </div>
+              <!-- 그리드 레이아웃으로 재구성 -->
+              <div class="report-grid">
+                <!-- TOP 장르 카드 -->
+                <div v-if="preferenceReport.genre_distribution" class="report-card">
+                  <strong class="report-card-title">TOP 장르</strong>
+                  <div class="report-tags">
+                    <span v-for="(percent, genre) in preferenceReport.genre_distribution" :key="genre" class="report-tag">
+                      {{ genre }} <span class="tag-value">({{ percent }}%)</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 평균 별점 카드 -->
+                <div v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평균 평점']" class="report-card">
+                  <strong class="report-card-title">평균 별점</strong>
+                  <div class="report-value">{{ preferenceReport.mood_analysis['평균 평점'] }}점</div>
+                </div>
+
+                <!-- 평점 분포 카드 -->
+                <div v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평점 분포']" class="report-card report-card-wide">
+                  <strong class="report-card-title">평점 분포</strong>
+                  <div class="rating-distribution">
+                    <div 
+                      v-for="(data, rating) in preferenceReport.mood_analysis['평점 분포']" 
+                      :key="rating"
+                      class="rating-bar-item"
+                    >
+                      <div class="rating-label">{{ rating }}점</div>
+                      <div class="rating-bar-container">
+                        <div 
+                          class="rating-bar" 
+                          :style="{ width: data.percentage + '%' }"
+                        ></div>
+                        <span class="rating-count">{{ data.count }}개 ({{ data.percentage }}%)</span>
                       </div>
                     </div>
-                  </li>
-                  <li v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평점 요약']">
-                    <strong>평점 요약</strong>
-                    <div class="rating-summary">
-                      <div 
-                        v-for="(data, key) in preferenceReport.mood_analysis['평점 요약']" 
-                        :key="key"
-                        class="rating-summary-item"
-                      >
-                        <span class="summary-label">{{ data.label }}</span>
-                        <span class="summary-value">{{ data.count }}개 ({{ data.percentage }}%)</span>
-                      </div>
+                  </div>
+                </div>
+
+                <!-- 평점 요약 카드 -->
+                <div v-if="preferenceReport.mood_analysis && preferenceReport.mood_analysis['평점 요약']" class="report-card">
+                  <strong class="report-card-title">평점 요약</strong>
+                  <div class="rating-summary">
+                    <div 
+                      v-for="(data, key) in preferenceReport.mood_analysis['평점 요약']" 
+                      :key="key"
+                      class="rating-summary-item"
+                    >
+                      <span class="summary-label">{{ data.label }}</span>
+                      <span class="summary-value">{{ data.count }}개 ({{ data.percentage }}%)</span>
                     </div>
-                  </li>
-                  <li v-if="preferenceReport.director_preferences">
-                    <strong>선호 감독</strong>
-                    <div class="report-tags">
-                      <span v-for="(count, director) in preferenceReport.director_preferences" :key="director" class="report-tag">
-                        {{ director }} <span class="tag-value">({{ count }}편)</span>
-                      </span>
-                    </div>
-                  </li>
-                  <li v-if="preferenceReport.top_rated_movies && preferenceReport.top_rated_movies.length > 0">
-                    <strong>높은 평점 영화</strong>
-                    <div class="report-tags">
-                      <span v-for="movie in preferenceReport.top_rated_movies" :key="movie" class="report-tag">
-                        {{ movie }}
-                      </span>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-              <div class="report-right">
-                <div class="report-visualization">
+                  </div>
+                </div>
+
+                <!-- 선호 감독 카드 -->
+                <div v-if="preferenceReport.director_preferences" class="report-card">
+                  <strong class="report-card-title">선호 감독</strong>
+                  <div class="report-tags">
+                    <span v-for="(count, director) in preferenceReport.director_preferences" :key="director" class="report-tag">
+                      {{ director }} <span class="tag-value">({{ count }}편)</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 높은 평점 영화 카드 -->
+                <div v-if="preferenceReport.top_rated_movies && preferenceReport.top_rated_movies.length > 0" class="report-card">
+                  <strong class="report-card-title">높은 평점 영화</strong>
+                  <div class="report-tags">
+                    <span v-for="movie in preferenceReport.top_rated_movies" :key="movie" class="report-tag">
+                      {{ movie }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 차트 카드 (큰 영역) -->
+                <div class="report-card report-card-chart">
+                  <strong class="report-card-title">영화 취향 분석</strong>
+                  <div class="report-visualization">
                   <div v-if="chartData.length === 0" class="chart-empty">
                     <p>차트 데이터가 없습니다.</p>
                     <p class="chart-empty-note">리뷰한 영화에 heaviness와 satisfaction 정보가 필요합니다.</p>
@@ -484,6 +496,7 @@
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
             <div v-if="preferenceReport.summary" class="report-summary-wrapper">
@@ -2109,9 +2122,126 @@ const cancelImageUpload = () => {
 }
 
 .report-main-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 30px;
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.report-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-left: 3px solid var(--accent-acid);
+  border-radius: 0;
+  padding: 30px;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.report-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-acid), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.report-card:hover {
+  background: rgba(0, 0, 0, 0.6);
+  border-left-color: var(--accent-acid);
+  box-shadow: 0 0 30px rgba(204, 255, 0, 0.1);
+  transform: translateX(5px);
+}
+
+.report-card:hover::before {
+  opacity: 1;
+}
+
+.report-card-wide {
+  grid-column: span 2;
+}
+
+.report-card-chart {
+  grid-column: 1 / -1;
+  min-height: 600px;
+  border-left: 3px solid var(--accent-acid);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 40px;
+}
+
+.report-card-title {
+  display: block;
+  margin-bottom: 25px;
+  color: var(--accent-acid);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(204, 255, 0, 0.6);
+  border-bottom: 2px solid rgba(204, 255, 0, 0.2);
+  padding-bottom: 15px;
+  position: relative;
+}
+
+.report-card-title::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 50px;
+  height: 2px;
+  background: var(--accent-acid);
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.8);
+}
+
+/* 반응형 */
+@media (max-width: 1024px) {
+  .report-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .report-card-wide {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .report-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .report-card-wide {
+    grid-column: span 1;
+  }
+  
+  .report-card-chart {
+    min-height: 400px;
+    padding: 25px;
+  }
+  
+  .report-card {
+    padding: 20px;
+  }
+  
+  .report-value {
+    font-size: 2.5rem;
+  }
 }
 
 .report-header-section {
@@ -2174,46 +2304,7 @@ const cancelImageUpload = () => {
   opacity: 0.5;
 }
 
-.report-left {
-  display: flex;
-  flex-direction: column;
-}
-
-.report-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.report-list li {
-  margin-bottom: 25px;
-  padding: 30px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 2px solid #666;
-  border-left: 5px solid var(--accent-acid);
-  border-radius: 0;
-  line-height: 2;
-  transition: all 0.3s;
-}
-
-.report-list li:hover {
-  background: rgba(255, 255, 255, 0.18);
-  border-left-color: var(--accent-acid);
-  border-color: #777;
-  box-shadow: -5px 0 20px rgba(204, 255, 0, 0.4);
-}
-
-.report-list li strong {
-  display: block;
-  margin-bottom: 20px;
-  color: var(--accent-acid);
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 1.2rem;
-  font-weight: 700;
-  text-shadow: 0 0 8px rgba(204, 255, 0, 0.5);
-}
+/* 기존 report-left, report-list 스타일은 report-card로 대체됨 */
 
 .report-tags {
   display: flex;
@@ -2224,23 +2315,24 @@ const cancelImageUpload = () => {
 
 .report-tag {
   display: inline-block;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid #777;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #444;
   border-radius: 0;
-  font-size: 15px;
-  color: #ffffff;
+  font-size: 13px;
+  color: #ccc;
   font-family: var(--font-tech);
   transition: all 0.3s;
-  font-weight: 600;
+  font-weight: 500;
+  margin: 4px;
 }
 
 .report-tag:hover {
   border-color: var(--accent-acid);
   color: var(--accent-acid);
-  background: rgba(204, 255, 0, 0.15);
-  box-shadow: 0 0 15px rgba(204, 255, 0, 0.4);
-  transform: translateY(-2px);
+  background: rgba(204, 255, 0, 0.1);
+  box-shadow: 0 0 10px rgba(204, 255, 0, 0.3);
+  transform: translateY(-1px);
 }
 
 .tag-value {
@@ -2251,13 +2343,15 @@ const cancelImageUpload = () => {
 }
 
 .report-value {
-  margin-top: 20px;
-  font-size: 2.5rem;
+  margin-top: 30px;
+  font-size: 3.5rem;
   color: var(--accent-acid);
   font-family: var(--font-display);
   font-weight: 700;
-  text-shadow: 0 0 15px rgba(204, 255, 0, 0.7);
-  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(204, 255, 0, 0.8);
+  letter-spacing: 4px;
+  text-align: center;
+  line-height: 1;
 }
 
 /* 평점 분포 */
@@ -2360,16 +2454,7 @@ const cancelImageUpload = () => {
   box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
 }
 
-.report-right {
-  background: rgba(255, 255, 255, 0.12);
-  border: 2px solid #666;
-  border-radius: 0;
-  padding: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-}
+/* report-right는 report-card-chart로 대체됨 */
 
 .report-visualization {
   text-align: center;
