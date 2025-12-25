@@ -2,7 +2,7 @@
   <div class="profile-page">
     <div class="profile-header">
       <div class="header-left">
-        <div class="logo" @click="goToHome">Metcha</div>
+        <div class="logo" @click="goToHome">METCHA</div>
         <h1 class="username">{{ userProfile?.username || 'USER 1' }}</h1>
       </div>
       <div class="header-right">

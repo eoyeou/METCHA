@@ -2,7 +2,7 @@
   <div class="search-results-page">
     <div class="search-header">
       <div class="header-left">
-        <div class="logo" @click="goToHome">Metcha</div>
+        <div class="logo" @click="goToHome">METCHA</div>
         <div class="search-box-container">
           <div class="search-box">
             <input
